@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+      <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+      <version>45.0</version>
+    <types>
+      <name>ApexClass</name>      
+      <members>VFC_ProfileUsersSecurityGroupMember</members>
+<members>UserSecurityGroupController</members>
+<members>VFP_PermissionSetGroupEdit</members>
+<members>VFC_ProfileAssignmentMethods_Test</members>
+<members>VFC_UserSecurityMemberRedirect_TEST</members>
+<members>VFP_PSUsersSecurityGroupmember</members>
+<members>VFC_UserSecurityMemberRedirect</members>
+<members>VFC_PermissionSetGroup</members>
+</types>
+<types>
+      <name>ApexPage</name>      
+      <members>VFP_UserSecurityMemberRedirect</members>
+<members>VFP_PermissionSetGroupEdit</members>
+<members>VFP_ProfileUsersSecurityGroupmemberEdit</members>
+</types>
+<types>
+      <name>ApprovalProcess</name>      
+      <members>PermissionSetAssignmentRequests__c.PLATUserSecurityRequestApproval2</members>
+<members>PermissionSetAssignmentRequests__c.PLATUserSecurityRequestApproval</members>
+</types>
+<types>
+      <name>ApexTrigger</name>      
+      <members>PermissionSetAssignmentRequestsTriggerEvent</members>
+<members>USAGEventTrigger</members>
+</types>
+<types>
+      <name>AuraDefinitionBundle</name>      
+      <members>UserSecurityGroupRecord</members>
+<members>UserManagementLightning3</members>
+<members>UserManagementLightning2</members>
+</types>
+<types>
+      <name>CustomApplication</name>      
+      <members>UserManagementLightning</members>
+</types>
+<types>
+      <name>CustomField</name>      
+      <members>PermissionSetGroup__c.RelatedGroup__c</members>
+<members>PermissionSetGroup__c.TECH_Level2Approver__c</members>
+<members>PermissionSetGroup__c.Approver_2_name__c</members>
+<members>PermissionSetGroup__c.Approver1_name__c</members>
+<members>PermissionSetGroup__c.DemotoLG__c</members>
+<members>Permission_Set_Group_Assignment_Request__e.UserId__c</members>
+<members>Permission_Set_Group_Assignment_Request__e.UserSecurityGroupId__c</members>
+<members>PermissionSetGroup__c.TECH_Level1Approver__c</members>
+<members>PermissionSetGroup__c.CountOfProfileMembers__c</members>
+</types>
+<types>
+      <name>CustomObject</name>      
+      <members>PermissionSetGroup__c</members>
+<members>PermissionSetAssignmentRequests__c</members>
+</types>
+</Package>

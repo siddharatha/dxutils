@@ -1,0 +1,30 @@
+{
+  "CustomLabel": [
+    "insideboard__WS_ERROR_UNKNOWN",
+    "insideboard__WS_ERROR_CREDENTIAL",
+    "insideboard__WS_ERROR_403"
+  ],
+  "InstalledPackage": [
+    "QuipConnected",
+    "relateiq",
+    "relateiq",
+    "QuipConnected",
+    "QuipConnected",
+    "insideboard",
+    "relateiq"
+  ],
+  "CustomLabels": [
+    "CustomLabels"
+  ],
+  "Certificate": [
+    "bFO_bFS_myFS_Certificate_2018"
+  ],
+  "StaticResource": [
+    "insideboard__reviews_assets",
+    "Welcome_DK_ContactSearch",
+    "insideboard__SLDS",
+    "insideboard__IB",
+    "insideboard__IB_background",
+    "insideboard__IB_bottom"
+  ]
+}
