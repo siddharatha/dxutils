@@ -30,36 +30,39 @@ USAGE
 ```
 <!-- usagestop -->
 <!-- commands -->
-* [`dxutils <%= command.id %> [-n <string>] [-f] [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#dxutils--commandid---n-string--f--v-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
+* [`dxutils <%= command.id %> [-d <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#dxutils--commandid---d-integer--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
 
-## `dxutils <%= command.id %> [-n <string>] [-f] [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
+## `dxutils <%= command.id %> [-d <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
 
 print a greeting and your org IDs
 
 ```
 USAGE
-  $ dxutils dxutils:org [-n <string>] [-f] [-v <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
+  $ dxutils mdapi:pull [-d <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
   trace|debug|info|warn|error|fatal]
 
 OPTIONS
-  -f, --force                                      example boolean flag
-  -n, --name=name                                  name to print
-  -u, --targetusername=targetusername              username or alias for the target org; overrides default target org
-  -v, --targetdevhubusername=targetdevhubusername  username or alias for the dev hub org; overrides default dev hub org
-  --apiversion=apiversion                          override the api version used for api requests made by this command
-  --json                                           format output as json
-  --loglevel=(trace|debug|info|warn|error|fatal)   [default: warn] logging level for this command invocation
+  -d, --days=days                                 Please select the number of days we need to specify for getting org
+                                                  details
+
+  -u, --targetusername=targetusername             username or alias for the target org; overrides default target org
+
+  --apiversion=apiversion                         override the api version used for api requests made by this command
+
+  --json                                          format output as json
+
+  --loglevel=(trace|debug|info|warn|error|fatal)  [default: warn] logging level for this command invocation
 
 EXAMPLES
-  $ sfdx dxutils:org --targetusername myOrg@example.com --targetdevhubusername devhub@org.com
+  $ sfdx mdapi:pull --targetusername myOrg@example.com --targetdevhubusername devhub@org.com
      Hello world! This is org: MyOrg and I will be around until Tue Mar 20 2018!
      My hub org id is: 00Dxx000000001234
   
-  $ sfdx dxutils:org --name myname --targetusername myOrg@example.com
+  $ sfdx mdapi:pull --name myname --targetusername myOrg@example.com
      Hello myname! This is org: MyOrg and I will be around until Tue Mar 20 2018!
 ```
 
-_See code: [src/commands/dxutils/org.ts](https://github.com/siddharatha/dxutils/blob/v0.0.0/src/commands/dxutils/org.ts)_
+_See code: [src/commands/mdapi/pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.0/src/commands/mdapi/pull.ts)_
 <!-- commandsstop -->
 <!-- debugging-your-plugin -->
 # Debugging your plugin
