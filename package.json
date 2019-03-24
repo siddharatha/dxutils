@@ -47,8 +47,8 @@
   "oclif": {
     "commands": "./lib/commands",
     "topics": {
-      "mdapi": {
-        "description": "Commands to perform pull operation."
+      "pull": {
+        "description": "Perform a pull."
       }
     },
     "devPlugins": [

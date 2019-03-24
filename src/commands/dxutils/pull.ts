@@ -17,11 +17,12 @@ export default class Pull extends SfdxCommand {
   public static description = messages.getMessage("commandDescription");
 
   public static examples = [
-    `$ sfdx mdapi:pull --targetusername myOrg@example.com --targetdevhubusername devhub@org.com
-  Hello world! This is org: MyOrg and I will be around until Tue Mar 20 2018!
-  My hub org id is: 00Dxx000000001234
+    `$ sfdx dxutils:pull --targetusername myOrg@example.com
+  Hello <your name>
+  
+  
   `,
-    `$ sfdx mdapi:pull --name myname --targetusername myOrg@example.com
+    `$ sfdx dxutils:pull --name myname --targetusername myOrg@example.com
   Hello myname! This is org: MyOrg and I will be around until Tue Mar 20 2018!
   `
   ];
@@ -32,6 +33,11 @@ export default class Pull extends SfdxCommand {
       name: "days",
       char: "d",
       description: messages.getMessage("daysFlagDescription")
+    }),
+    autodownload: flags.boolean({
+      name: "autodownload",
+      char: "a",
+      description: messages.getMessage("autoDownloadFlagDescription")
     })
   };
 
@@ -46,6 +52,7 @@ export default class Pull extends SfdxCommand {
 
   public async run(): Promise<AnyJson> {
     const days = this.flags.days || 30;
+    const autodownload: boolean = this.flags.autodownload || false;
     // const types = this.flags.types || null;
     // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
     const conn = this.org.getConnection();
@@ -71,9 +78,11 @@ export default class Pull extends SfdxCommand {
       }
       return typearray;
     });
-    this.ux.stopSpinner(`Your org has ${items.length} metadata types
-    Learn about metadata types here : https://developer.salesforce.com/docs/metadata-coverage
-    `);
+    this.ux.stopSpinner(`Your org has ${items.length} metadata types`);
+    this.ux.cli.url(
+      "Learn about metadata types and coverage",
+      "https://developer.salesforce.com/docs/metadata-coverage"
+    );
     const lstitems = []
       .concat(...items)
       .sort((a, b) => (a["type"] > b["type"] ? 1 : -1))
@@ -89,7 +98,7 @@ export default class Pull extends SfdxCommand {
       "Calculating changes in your sandbox, should take about 3 minutes .. Hang on"
     );
     const allresults = await Promise.map(
-      lstitems,
+      lstitems.slice(0, 4),
       eachitem => {
         return conn.metadata
           .list(eachitem, conn.getApiVersion())
@@ -122,7 +131,15 @@ export default class Pull extends SfdxCommand {
         } else mychanges[eachItem.type] = [eachItem.fullName];
       });
       this.ux.stopSpinner("That took a while, but we managed to collect info");
-
+      this.ux.table(
+        Object.keys(mychanges).map(eachKey => {
+          return {
+            type: eachKey,
+            changes: mychanges[eachKey].join(",")
+          };
+        }),
+        ["type", "changes"]
+      );
       let packagexmlstring = `<?xml version="1.0" encoding="UTF-8"?>
       <Package xmlns="http://soap.sforce.com/2006/04/metadata">
       <version>${conn.getApiVersion()}</version>
@@ -141,21 +158,40 @@ export default class Pull extends SfdxCommand {
         .join("");
       packagexmlstring += "</Package>";
       // const allresults = await Promise.all(lstitems.map(eacharray=>conn.metadata.list(eacharray)));
-      fs.writeFile("./package.xml", packagexmlstring, "utf8");
-      this.ux.log("Generated package xml");
-      const downloadconfirm = this.ux.confirm(
-        "Would you like me to download the files generated ? If you prefer to make changes to the xml let me know"
-      );
-      if (downloadconfirm) {
-        const retrieveCommand = `sfdx force:source:retrieve -x ./package.xml -w 30 -u ${this.org.getUsername()} --json`;
+      const dirname = `./tmp_manifest_${moment().toISOString()}`;
+      await fs.mkdirp(dirname);
+      await fs.writeFile(`${dirname}/package.xml`, packagexmlstring, "utf8");
+      this.ux.log(`Generated package xml`);
+      if (autodownload) {
+        this.ux.startSpinner(
+          `you opted for autodownload. so I am Downloading the changes`
+        );
+        let retrieveCommand = "";
+        if (this.project) {
+          this.ux.log(
+            "You are in a project mode, will keep the files in your project folder"
+          );
+          retrieveCommand = `sfdx force:source:retrieve -x ${dirname}/package.xml -w 30 -u ${this.org.getUsername()} --json`;
+        } else {
+          this.ux.warn(
+            `You are testing outside sfdx project.
+            I cannot convert the files into dx format , use sfdx force:mdapi:convert command from your sfdx project folder
+            I retrieved the files for you here ${dirname}/unpackaged
+            `
+          );
+          retrieveCommand = `sfdx force:mdapi:retrieve -k ${dirname}/package.xml -w 30 -u ${this.org.getUsername()} -r ${dirname} && cd ${dirname} && unzip unpackaged.zip && rm unpackaged.zip & cd ..`;
+        }
         try {
           await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
+          this.ux.stopSpinner("Done downloading source files");
           return `successfully retrieved files`;
         } catch (e) {
           try {
             await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
+            this.ux.stopSpinner("Done downloading source files");
             return `successfully retrieved files `;
           } catch (e2) {
+            this.ux.stopSpinner("Done downloading source files");
             return `successfully retrieved files`;
           }
         }

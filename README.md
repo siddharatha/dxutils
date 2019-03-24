@@ -22,7 +22,7 @@ $ npm install -g dxutils
 $ dxutils COMMAND
 running command...
 $ dxutils (-v|--version|version)
-dxutils/0.0.0 darwin-x64 node-v10.7.0
+dxutils/0.0.0 darwin-x64 node-v8.15.1
 $ dxutils --help [COMMAND]
 USAGE
   $ dxutils COMMAND
@@ -30,18 +30,20 @@ USAGE
 ```
 <!-- usagestop -->
 <!-- commands -->
-* [`dxutils <%= command.id %> [-d <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#dxutils--commandid---d-integer--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
+* [`dxutils <%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#dxutils--commandid---d-integer--a--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
 
-## `dxutils <%= command.id %> [-d <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
+## `dxutils <%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
 
 print a greeting and your org IDs
 
 ```
 USAGE
-  $ dxutils mdapi:pull [-d <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
+  $ dxutils dxutils:pull [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
   trace|debug|info|warn|error|fatal]
 
 OPTIONS
+  -a, --autodownload                              AutoDownload the files using sfdx force:source:retrieve
+
   -d, --days=days                                 Please select the number of days we need to specify for getting org
                                                   details
 
@@ -54,15 +56,16 @@ OPTIONS
   --loglevel=(trace|debug|info|warn|error|fatal)  [default: warn] logging level for this command invocation
 
 EXAMPLES
-  $ sfdx mdapi:pull --targetusername myOrg@example.com --targetdevhubusername devhub@org.com
-     Hello world! This is org: MyOrg and I will be around until Tue Mar 20 2018!
-     My hub org id is: 00Dxx000000001234
+  $ sfdx dxutils:pull --targetusername myOrg@example.com
+     Hello <your name>
   
-  $ sfdx mdapi:pull --name myname --targetusername myOrg@example.com
+  
+  
+  $ sfdx dxutils:pull --name myname --targetusername myOrg@example.com
      Hello myname! This is org: MyOrg and I will be around until Tue Mar 20 2018!
 ```
 
-_See code: [src/commands/mdapi/pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.0/src/commands/mdapi/pull.ts)_
+_See code: [src/commands/dxutils/pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.0/src/commands/dxutils/pull.ts)_
 <!-- commandsstop -->
 <!-- debugging-your-plugin -->
 # Debugging your plugin

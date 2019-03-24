@@ -4,5 +4,5 @@
   "forceFlagDescription": "example boolean flag",
   "errorNoOrgResults": "No results found for the org '%s'.",
   "daysFlagDescription": "Please select the number of days we need to specify for getting org details",
-  "outputDirFlagDescription": "Please select the output directory flag description"
+  "autoDownloadFlagDescription": "AutoDownload the files using sfdx force:source:retrieve"
 }
