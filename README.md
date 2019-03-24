@@ -22,7 +22,7 @@ $ npm install -g dxutils
 $ dxutils COMMAND
 running command...
 $ dxutils (-v|--version|version)
-dxutils/0.0.0 darwin-x64 node-v8.15.1
+dxutils/0.0.0 darwin-x64 node-v10.7.0
 $ dxutils --help [COMMAND]
 USAGE
   $ dxutils COMMAND
@@ -34,7 +34,7 @@ USAGE
 
 ## `dxutils <%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
 
-print a greeting and your org IDs
+Pull changes from your connected org and generate an xml or autodownload metadata based on last modified date
 
 ```
 USAGE
@@ -57,12 +57,12 @@ OPTIONS
 
 EXAMPLES
   $ sfdx dxutils:pull --targetusername myOrg@example.com
-     Hello <your name>
-  
-  
-  
-  $ sfdx dxutils:pull --name myname --targetusername myOrg@example.com
-     Hello myname! This is org: MyOrg and I will be around until Tue Mar 20 2018!
+     Hello myname
+     Calculating packages
+  $ sfdx dxutils:pull -u myOrg@example.com -a
+     Hello myname
+     Calculating packages ...
+     You have 130 metadata types in your org I can scan
 ```
 
 _See code: [src/commands/dxutils/pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.0/src/commands/dxutils/pull.ts)_
