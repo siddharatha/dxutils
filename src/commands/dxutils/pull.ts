@@ -61,10 +61,36 @@ export default class Pull extends SfdxCommand {
       `select Id,Name from User where username='${conn.getUsername()}'`
     )).records[0];
     this.ux.log(`hello ${userInfo['Name']}`);
-    this.ux.startSpinner('Calculating Packages');
-    const items = (await conn.metadata.describe(
+    const auditlogdetail = await conn.query(`select Field1,Field4 from SetupAuditTrail where Action like '%picklist%' and CreatedDate=last_n_days:${days}`);
+    const theMap = {};
+    (await conn.describeGlobal()).sobjects.filter(eachSobject=>
+      !(eachSobject.name.endsWith('__Tag') || eachSobject.name.endsWith('__History') || eachSobject.name.endsWith('__Feed') || eachSobject.name.endsWith('__ChangeEvent') || eachSobject.name.endsWith('__Share'))
+    ).forEach(eachObject=>{
+      theMap[eachObject.labelPlural] = eachObject.name
+    });
+    const theObjectsToFieldList = {};
+    auditlogdetail.records.forEach(eachRecord=>{
+      if(theMap.hasOwnProperty(eachRecord['Field4'])){
+        if(theObjectsToFieldList.hasOwnProperty(eachRecord['Field4'])){        
+          theObjectsToFieldList[theMap[eachRecord['Field4']]].push(eachRecord['Field1']);
+        }
+        theObjectsToFieldList[theMap[eachRecord['Field4']]] = [eachRecord['Field1']];
+      }      
+    });
+
+    const getDescribe = async objectName => {
+      return await conn.sobject(objectName).describe().then(eachRes=>{
+        return eachRes.fields.filter(eachField=>{          
+          return theObjectsToFieldList[objectName].includes(eachField.label)
+        }).map(eachField=>`${objectName}.${eachField.name}`)
+      })
+    }
+    const objects = Object.keys(theObjectsToFieldList);
+    const picklists = [].concat(await Promise.all(objects.map(getDescribe)));          
+    const metadatatypes = await conn.metadata.describe(
       conn.getApiVersion()
-    )).metadataObjects.map(eachMetadataType => {
+    );      
+    const items = metadatatypes.metadataObjects.map(eachMetadataType => {      
       const typearray = [];
       if (
         eachMetadataType.xmlName !== 'CustomLabels' &&
@@ -126,22 +152,17 @@ export default class Pull extends SfdxCommand {
       }
       return false;
     });
-    fs.writeJson(path.resolve('./changes.json'),allres);
+    
+    
     if (allres) {
       allres.forEach(eachItem => {
         if (mychanges.hasOwnProperty(eachItem.type)) {
           mychanges[eachItem.type].push(eachItem.fullName);
         } else mychanges[eachItem.type] = [eachItem.fullName];
       });
-      this.ux.stopSpinner('That took a while, but we managed to collect info');
-      this.ux.logJson(
-        Object.keys(mychanges).map(eachKey => {
-          return {
-            type: eachKey,
-            changes: mychanges[eachKey].join(',')
-          };
-        })        
-      );
+      mychanges['CustomField'].push(...picklists);
+      this.ux.stopSpinner('That took a while, but we managed to collect info');      
+      fs.writeJson(path.resolve('./changes.json'),mychanges);
       let packagexmlstring = `<?xml version="1.0" encoding="UTF-8"?>
       <Package xmlns="http://soap.sforce.com/2006/04/metadata">
       <version>${conn.getApiVersion()}</version>

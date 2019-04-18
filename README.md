@@ -22,7 +22,7 @@ $ npm install -g @siddharatha/dxutils
 $ @siddharatha/dxutils COMMAND
 running command...
 $ @siddharatha/dxutils (-v|--version|version)
-@siddharatha/dxutils/0.0.6 darwin-x64 node-v10.7.0
+@siddharatha/dxutils/0.0.6 darwin-x64 node-v10.15.3
 $ @siddharatha/dxutils --help [COMMAND]
 USAGE
   $ @siddharatha/dxutils COMMAND
