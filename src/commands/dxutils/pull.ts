@@ -93,6 +93,7 @@ export default class Pull extends SfdxCommand {
     const items = metadatatypes.metadataObjects.map(eachMetadataType => {      
       const typearray = [];
       if (
+        eachMetadataType.xmlName !== 'Profile' &&        
         eachMetadataType.xmlName !== 'CustomLabels' &&
         eachMetadataType.xmlName !== 'WorkflowTask' &&
         !eachMetadataType.xmlName.includes('ManagedTopic')
