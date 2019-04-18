@@ -1,7 +1,7 @@
 {
-  "name": "dxutils",
+  "name": "@siddharatha/dxutils",
   "description": "Additional utilities to support vscode utilities",
-  "version": "0.0.0",
+  "version": "0.0.6",
   "author": "Sid @siddharatha",
   "bugs": "https://github.com/siddharatha/dxutils/issues",
   "dependencies": {
@@ -49,6 +49,9 @@
     "topics": {
       "pull": {
         "description": "Perform a pull."
+      },
+      "starter": {
+        "description": "Perform a starter"
       }
     },
     "devPlugins": [

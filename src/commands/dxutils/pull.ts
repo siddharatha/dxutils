@@ -4,6 +4,7 @@ import { AnyJson } from '@salesforce/ts-types';
 import * as Promise from 'bluebird';
 import * as child_process from 'child_process';
 import * as moment from 'moment';
+import * as path from 'path';
 
 const exec = Promise.promisify(child_process.exec);
 // Initialize Messages with the current plugin directory
@@ -11,7 +12,7 @@ core.Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = core.Messages.loadMessages('dxutils', 'pull');
+const messages = core.Messages.loadMessages('@siddharatha/dxutils', 'pull');
 
 export default class Pull extends SfdxCommand {
   public static description = messages.getMessage('commandDescription');
@@ -120,11 +121,12 @@ export default class Pull extends SfdxCommand {
         return (
           diffindays <= days &&
           (eachResult.lastModifiedById === userInfo['Id'] ||
-            eachResult.createdById === userInfo['Id'])
+          eachResult.createdById === userInfo['Id'])
         );
       }
       return false;
     });
+    fs.writeJson(path.resolve('./changes.json'),allres);
     if (allres) {
       allres.forEach(eachItem => {
         if (mychanges.hasOwnProperty(eachItem.type)) {
@@ -132,14 +134,13 @@ export default class Pull extends SfdxCommand {
         } else mychanges[eachItem.type] = [eachItem.fullName];
       });
       this.ux.stopSpinner('That took a while, but we managed to collect info');
-      this.ux.table(
+      this.ux.logJson(
         Object.keys(mychanges).map(eachKey => {
           return {
             type: eachKey,
             changes: mychanges[eachKey].join(',')
           };
-        }),
-        ['type', 'changes']
+        })        
       );
       let packagexmlstring = `<?xml version="1.0" encoding="UTF-8"?>
       <Package xmlns="http://soap.sforce.com/2006/04/metadata">
@@ -157,28 +158,17 @@ export default class Pull extends SfdxCommand {
         })
         .join('');
       packagexmlstring += '</Package>';
-      // const allresults = await Promise.all(lstitems.map(eacharray=>conn.metadata.list(eacharray)));
-      const dirname = `./tmp_manifest_${moment().toISOString()}`;
-      await fs.mkdirp(dirname);
-      await fs.writeFile(`${dirname}/package.xml`, packagexmlstring, 'utf8');
+      // const allresults = await Promise.all(lstitems.map(eacharray=>conn.metadata.list(eacharray)));      
+      
+      await fs.writeFile(path.resolve(`./package.xml`), packagexmlstring, 'utf8');
       this.ux.log('Generated package xml');
       if (autodownload) {
         this.ux.startSpinner('you opted for autodownload. so I am Downloading the changes');
         let retrieveCommand = '';
-        if (this.project) {
           this.ux.log(
             'You are in a project mode, will keep the files in your project folder'
           );
-          retrieveCommand = `sfdx force:source:retrieve -x ${dirname}/package.xml -w 30 -u ${this.org.getUsername()} --json`;
-        } else {
-          this.ux.warn(
-            `You are testing outside sfdx project.
-            I cannot convert the files into dx format , use sfdx force:mdapi:convert command from your sfdx project folder
-            I will retrieve the files for you here ${dirname}/unpackaged
-            `
-          );
-          retrieveCommand = `sfdx force:mdapi:retrieve -k ${dirname}/package.xml -w 30 -u ${this.org.getUsername()} -r ${dirname} && cd ${dirname} && unzip unpackaged.zip && rm unpackaged.zip & cd ..`;
-        }
+          retrieveCommand = `sfdx force:source:retrieve -x ${path.resolve('./package.xml')} -w 30 -u ${this.org.getUsername()} --json`;        
         try {
           await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
           this.ux.stopSpinner('Done downloading source files');

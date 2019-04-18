@@ -18,27 +18,28 @@ Additional utilities to support vscode utilities
 <!-- install -->
 <!-- usage -->
 ```sh-session
-$ npm install -g dxutils
-$ dxutils COMMAND
+$ npm install -g @siddharatha/dxutils
+$ @siddharatha/dxutils COMMAND
 running command...
-$ dxutils (-v|--version|version)
-dxutils/0.0.0 darwin-x64 node-v10.7.0
-$ dxutils --help [COMMAND]
+$ @siddharatha/dxutils (-v|--version|version)
+@siddharatha/dxutils/0.0.6 darwin-x64 node-v10.7.0
+$ @siddharatha/dxutils --help [COMMAND]
 USAGE
-  $ dxutils COMMAND
+  $ @siddharatha/dxutils COMMAND
 ...
 ```
 <!-- usagestop -->
 <!-- commands -->
-* [`dxutils <%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#dxutils--commandid---d-integer--a--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
+* [`@siddharatha/dxutils <%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#siddharathadxutils--commandid---d-integer--a--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
+* [`@siddharatha/dxutils <%= command.id %> [-n <string>] [-a] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#siddharathadxutils--commandid---n-string--a---json---loglevel-tracedebuginfowarnerrorfatal)
 
-## `dxutils <%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
+## `@siddharatha/dxutils <%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
 
 Pull changes from your connected org and generate an xml or autodownload metadata based on last modified date
 
 ```
 USAGE
-  $ dxutils dxutils:pull [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
+  $ @siddharatha/dxutils dxutils:pull [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
   trace|debug|info|warn|error|fatal]
 
 OPTIONS
@@ -65,7 +66,33 @@ EXAMPLES
      You have 130 metadata types in your org I can scan
 ```
 
-_See code: [src/commands/dxutils/pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.0/src/commands/dxutils/pull.ts)_
+_See code: [src/commands/dxutils/pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.6/src/commands/dxutils/pull.ts)_
+
+## `@siddharatha/dxutils <%= command.id %> [-n <string>] [-a] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
+
+Pull changes from your connected org and generate an xml or autodownload metadata based on last modified date
+
+```
+USAGE
+  $ @siddharatha/dxutils dxutils:starter [-n <string>] [-a] [--json] [--loglevel trace|debug|info|warn|error|fatal]
+
+OPTIONS
+  -a, --autodownload                              AutoDownload the files using sfdx force:source:retrieve
+  -n, --projectname=projectname                   Please select the project name
+  --json                                          format output as json
+  --loglevel=(trace|debug|info|warn|error|fatal)  [default: warn] logging level for this command invocation
+
+EXAMPLES
+  $ sfdx dxutils:pull --targetusername myOrg@example.com
+     Hello myname
+     Calculating packages
+  $ sfdx dxutils:pull -u myOrg@example.com -a
+     Hello myname
+     Calculating packages ...
+     You have 130 metadata types in your org I can scan
+```
+
+_See code: [src/commands/dxutils/starter.ts](https://github.com/siddharatha/dxutils/blob/v0.0.6/src/commands/dxutils/starter.ts)_
 <!-- commandsstop -->
 <!-- debugging-your-plugin -->
 # Debugging your plugin
