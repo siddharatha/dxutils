@@ -39,6 +39,11 @@ export default class Pull extends SfdxCommand {
       name: 'autodownload',
       char: 'a',
       description: messages.getMessage('autoDownloadFlagDescription')
+    }),
+    autoclean: flags.boolean({
+      name:'autoclean',
+      char:'c',
+      description:messages.getMessage('autocleanFlagDescription')
     })    
   };
 
@@ -53,7 +58,8 @@ export default class Pull extends SfdxCommand {
 
   public async run(): Promise<AnyJson> {
     const days = this.flags.days || 30;
-    const autodownload: boolean = this.flags.autodownload || false;
+    const autodownload: boolean = this.flags.autodownload || false;    
+    const autoclean:boolean = this.flags.autoclean || false;
     // const types = this.flags.types || null;
     // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
     const conn = this.org.getConnection();    
@@ -191,20 +197,27 @@ export default class Pull extends SfdxCommand {
           this.ux.log(
             'You are in a project mode, will keep the files in your project folder'
           );          
-          retrieveCommand = `sfdx force:source:retrieve -x ${path.resolve('./package.xml')} -w 30 -u ${this.org.getUsername()} --json`;        
+          retrieveCommand = `sfdx force:source:retrieve -x ${path.resolve('./package.xml')} -w 30 -u ${this.org.getUsername()} --json`;                            
+          const cleanCommand = `sh ${path.resolve('./scripts/compressAll.sh')}`;
         try {
           await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
           this.ux.stopSpinner('Done downloading source files');
+          if(autoclean)
+          await exec(cleanCommand,{maxBuffer:1000000 * 1024})
           console.timeEnd('Retrieving your changes');
           return 'successfully retrieved files';          
         } catch (e) {
           try {
             await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
             this.ux.stopSpinner('Done downloading source files');
+            if(autoclean)
+          await exec(cleanCommand,{maxBuffer:1000000 * 1024})            
             console.timeEnd('Retrieving your changes');
             return 'successfully retrieved files ';
           } catch (e2) {
             this.ux.stopSpinner('Done downloading source files');
+            if(autoclean)
+            await exec(cleanCommand,{maxBuffer:1000000 * 1024})
             console.timeEnd('Retrieving your changes');
             return 'successfully retrieved files';
           }
