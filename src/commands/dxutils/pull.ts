@@ -39,7 +39,7 @@ export default class Pull extends SfdxCommand {
       name: 'autodownload',
       char: 'a',
       description: messages.getMessage('autoDownloadFlagDescription')
-    })
+    })    
   };
 
   // Comment this out if your command does not require an org username
@@ -56,11 +56,12 @@ export default class Pull extends SfdxCommand {
     const autodownload: boolean = this.flags.autodownload || false;
     // const types = this.flags.types || null;
     // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
-    const conn = this.org.getConnection();
+    const conn = this.org.getConnection();    
     const userInfo = (await conn.query(
       `select Id,Name from User where username='${conn.getUsername()}'`
     )).records[0];
     this.ux.log(`hello ${userInfo['Name']}`);
+    console.time('Get Picklist Changes');
     const auditlogdetail = await conn.query(`select Field1,Field4 from SetupAuditTrail where Action like '%picklist%' and CreatedDate=last_n_days:${days}`);
     const theMap = {};
     (await conn.describeGlobal()).sobjects.filter(eachSobject=>
@@ -76,8 +77,7 @@ export default class Pull extends SfdxCommand {
         }
         theObjectsToFieldList[theMap[eachRecord['Field4']]] = [eachRecord['Field1']];
       }      
-    });
-
+    });    
     const getDescribe = async objectName => {
       return await conn.sobject(objectName).describe().then(eachRes=>{
         return eachRes.fields.filter(eachField=>{          
@@ -89,11 +89,12 @@ export default class Pull extends SfdxCommand {
     const picklists = [].concat(await Promise.all(objects.map(getDescribe)));          
     const metadatatypes = await conn.metadata.describe(
       conn.getApiVersion()
-    );      
+    );
+    console.timeEnd('Get Picklist Changes');
+    console.time('Identify your changes');      
     const items = metadatatypes.metadataObjects.map(eachMetadataType => {      
       const typearray = [];
-      if (
-        eachMetadataType.xmlName !== 'Profile' &&        
+      if (        
         eachMetadataType.xmlName !== 'CustomLabels' &&
         eachMetadataType.xmlName !== 'WorkflowTask' &&
         !eachMetadataType.xmlName.includes('ManagedTopic')
@@ -106,7 +107,7 @@ export default class Pull extends SfdxCommand {
         });
       }
       return typearray;
-    });
+    });    
     this.ux.stopSpinner(`Your org has ${items.length} metadata types`);
     this.ux.cli.url(
       'Learn about metadata types and coverage',
@@ -161,9 +162,8 @@ export default class Pull extends SfdxCommand {
           mychanges[eachItem.type].push(eachItem.fullName);
         } else mychanges[eachItem.type] = [eachItem.fullName];
       });
-      mychanges['CustomField'].push(...picklists);
-      this.ux.stopSpinner('That took a while, but we managed to collect info');      
-      fs.writeJson(path.resolve('./changes.json'),mychanges);
+      mychanges['CustomField'].push(...picklists);            
+      this.ux.stopSpinner('That took a while, but we managed to collect info');            
       let packagexmlstring = `<?xml version="1.0" encoding="UTF-8"?>
       <Package xmlns="http://soap.sforce.com/2006/04/metadata">
       <version>${conn.getApiVersion()}</version>
@@ -180,28 +180,32 @@ export default class Pull extends SfdxCommand {
         })
         .join('');
       packagexmlstring += '</Package>';
+      console.timeEnd('Identify your changes');
       // const allresults = await Promise.all(lstitems.map(eacharray=>conn.metadata.list(eacharray)));      
-      
       await fs.writeFile(path.resolve(`./package.xml`), packagexmlstring, 'utf8');
       this.ux.log('Generated package xml');
+      console.time('Retrieving your changes');
       if (autodownload) {
         this.ux.startSpinner('you opted for autodownload. so I am Downloading the changes');
         let retrieveCommand = '';
           this.ux.log(
             'You are in a project mode, will keep the files in your project folder'
-          );
-          retrieveCommand = `sfdx force:source:retrieve -x ${path.resolve('./package.xml')} -w 30 -u ${this.org.getUsername()} --json`;        
+          );          
+          retrieveCommand = `sfdx force:mdapi:retrieve -k ${path.resolve('./package.xml')} -w 30 -u ${this.org.getUsername()} -r ${path.resolve('./unpackaged')} && cd ${path.resolve('./unpackaged')} && unzip unpackaged.zip && rm unpackaged.zip && cd .. && sfdx force:mdapi:convert -r ${path.resolve('./unpackaged')} `;                      
         try {
           await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
           this.ux.stopSpinner('Done downloading source files');
-          return 'successfully retrieved files';
+          console.timeEnd('Retrieving your changes');
+          return 'successfully retrieved files';          
         } catch (e) {
           try {
             await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
             this.ux.stopSpinner('Done downloading source files');
+            console.timeEnd('Retrieving your changes');
             return 'successfully retrieved files ';
           } catch (e2) {
             this.ux.stopSpinner('Done downloading source files');
+            console.timeEnd('Retrieving your changes');
             return 'successfully retrieved files';
           }
         }

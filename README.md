@@ -22,7 +22,7 @@ $ npm install -g @siddharatha/dxutils
 $ @siddharatha/dxutils COMMAND
 running command...
 $ @siddharatha/dxutils (-v|--version|version)
-@siddharatha/dxutils/0.0.7 darwin-x64 node-v10.7.0
+@siddharatha/dxutils/0.0.9 darwin-x64 node-v10.7.0
 $ @siddharatha/dxutils --help [COMMAND]
 USAGE
   $ @siddharatha/dxutils COMMAND
@@ -66,7 +66,7 @@ EXAMPLES
      You have 130 metadata types in your org I can scan
 ```
 
-_See code: [src/commands/dxutils/pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.7/src/commands/dxutils/pull.ts)_
+_See code: [src/commands/dxutils/pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.9/src/commands/dxutils/pull.ts)_
 
 ## `@siddharatha/dxutils <%= command.id %> [-n <string>] [-a] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
 
@@ -92,7 +92,7 @@ EXAMPLES
      You have 130 metadata types in your org I can scan
 ```
 
-_See code: [src/commands/dxutils/starter.ts](https://github.com/siddharatha/dxutils/blob/v0.0.7/src/commands/dxutils/starter.ts)_
+_See code: [src/commands/dxutils/starter.ts](https://github.com/siddharatha/dxutils/blob/v0.0.9/src/commands/dxutils/starter.ts)_
 <!-- commandsstop -->
 <!-- debugging-your-plugin -->
 # Debugging your plugin
