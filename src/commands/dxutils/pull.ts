@@ -191,7 +191,7 @@ export default class Pull extends SfdxCommand {
           this.ux.log(
             'You are in a project mode, will keep the files in your project folder'
           );          
-          retrieveCommand = `sfdx force:mdapi:retrieve -k ${path.resolve('./package.xml')} -w 30 -u ${this.org.getUsername()} -r ${path.resolve('./unpackaged')} && cd ${path.resolve('./unpackaged')} && unzip unpackaged.zip && rm unpackaged.zip && cd .. && sfdx force:mdapi:convert -r ${path.resolve('./unpackaged')} `;                      
+          retrieveCommand = `sfdx force:source:retrieve -x ${path.resolve('./package.xml')} -w 30 -u ${this.org.getUsername()} --json`;        
         try {
           await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
           this.ux.stopSpinner('Done downloading source files');
