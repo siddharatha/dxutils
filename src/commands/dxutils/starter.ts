@@ -1,15 +1,16 @@
 import { core, flags, SfdxCommand } from '@salesforce/command';
 import { fs } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
-import * as Promise from 'bluebird';
+import * as BlueBirdPromise from 'bluebird';
 import * as child_process from 'child_process';
 
-const exec = Promise.promisify(child_process.exec);
+const exec = BlueBirdPromise.promisify(child_process.exec);
 // Initialize Messages with the current plugin directory
 core.Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
+// Modifying the script for the demo to the team
 const messages = core.Messages.loadMessages('@siddharatha/dxutils', 'starter');
 
 export default class Starter extends SfdxCommand {
@@ -49,12 +50,12 @@ export default class Starter extends SfdxCommand {
   // Set this to true if your command requires a project workspace; 'requiresProject' is false by default
   protected static requiresProject = false;
 
-  public async run(): Promise<AnyJson> {
+  public async run(): BlueBirdPromise<AnyJson> {
     const projectname = this.flags.projectname;
     const autodownload: boolean = this.flags.autodownload || false;
     this.ux.log('creating a directory',`${autodownload}`);
     await fs.mkdirp(`./${projectname}`);
-    await download('http://github.com/siddharatha/lwc-starter-kit/archive/master.zip', `./${projectname}/lwc-starter.zip`);    
+    await download('http://github.com/siddharatha/lwc-starter-kit/archive/master.zip', `./${projectname}/lwc-starter.zip`);
   }
 }
 

@@ -30,20 +30,23 @@ USAGE
 ```
 <!-- usagestop -->
 <!-- commands -->
-* [`@siddharatha/dxutils <%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#siddharathadxutils--commandid---d-integer--a--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
+* [`@siddharatha/dxutils <%= command.id %> [-d <integer>] [-a] [-c] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#siddharathadxutils--commandid---d-integer--a--c--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
 * [`@siddharatha/dxutils <%= command.id %> [-n <string>] [-a] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#siddharathadxutils--commandid---n-string--a---json---loglevel-tracedebuginfowarnerrorfatal)
 
-## `@siddharatha/dxutils <%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
+## `@siddharatha/dxutils <%= command.id %> [-d <integer>] [-a] [-c] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
 
 Pull changes from your connected org and generate an xml or autodownload metadata based on last modified date
 
 ```
 USAGE
-  $ @siddharatha/dxutils dxutils:pull [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
-  trace|debug|info|warn|error|fatal]
+  $ @siddharatha/dxutils dxutils:pull [-d <integer>] [-a] [-c] [-u <string>] [--apiversion <string>] [--json] 
+  [--loglevel trace|debug|info|warn|error|fatal]
 
 OPTIONS
   -a, --autodownload                              AutoDownload the files using sfdx force:source:retrieve
+
+  -c, --autoclean                                 Automatically clean the files that are downloaded with sfdx
+                                                  dxutils:pull
 
   -d, --days=days                                 Please select the number of days we need to specify for getting org
                                                   details
@@ -58,12 +61,12 @@ OPTIONS
 
 EXAMPLES
   $ sfdx dxutils:pull --targetusername myOrg@example.com
-     Hello myname
-     Calculating packages
+           Hello myname
+           Calculating packages
   $ sfdx dxutils:pull -u myOrg@example.com -a
-     Hello myname
-     Calculating packages ...
-     You have 130 metadata types in your org I can scan
+           Hello myname
+           Calculating packages ...
+           You have 130 metadata types in your org I can scan
 ```
 
 _See code: [src\commands\dxutils\pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.10/src\commands\dxutils\pull.ts)_

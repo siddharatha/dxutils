@@ -1,22 +1,38 @@
-import { core, flags, SfdxCommand } from "@salesforce/command";
-import { SfdxProject } from "@salesforce/core";
-import { fs } from "@salesforce/core";
-import { AnyJson } from "@salesforce/ts-types";
-import * as Promise from "bluebird";
-import * as child_process from "child_process";
-import * as moment from "moment";
-import * as path from "path";
+import { core, flags, SfdxCommand } from '@salesforce/command';
+import { SfdxProject } from '@salesforce/core';
+import { fs } from '@salesforce/core';
+import { AnyJson } from '@salesforce/ts-types';
+import * as BlueBirdPromise from 'bluebird';
+import * as child_process from 'child_process';
+import * as moment from 'moment';
+import * as path from 'path';
+// import * as vscode from 'vscode';
 
-const exec = Promise.promisify(child_process.exec);
+const exec = BlueBirdPromise.promisify(child_process.exec);
 // Initialize Messages with the current plugin directory
 core.Messages.importMessagesDirectory(__dirname);
 
 // Load the specific messages for this file. Messages from @salesforce/command, @salesforce/core,
 // or any library that is using the messages framework can also be loaded this way.
-const messages = core.Messages.loadMessages("@siddharatha/dxutils", "pull");
+const messages = core.Messages.loadMessages('@siddharatha/dxutils', 'pull');
+
+// Array of metadata types that can ignored while performing list metadata operation
+// Enhance to read from Workspace / User Settings using vscode module
+const ignoredMetadataTypes: string[] = ['AccountForecastSettings', 'AIAssistantTemplate', 'AppleDomainVerification', 'AssistantSkillQuickAction',
+    'AssistantSkillSobjectAction', 'Audience', 'BlockchainSettings', 'Bot', 'BotSettings', 'BotVersion',
+    'CampaignInfluenceModel', 'CaseSubjectParticle', 'ChatterEmailsMDSettings', 'ChatterExtension', 'CleanDataService',
+    'CMSConnectSource', 'DataDotComSettings', 'DataPipeline', 'DelegateGroup', 'DeploymentSettings', 'DevHubSettings',
+    'EssentialsSettings', 'EssentialsTrialOrgSettings', 'FeatureParameterBoolean', 'FeatureParameterDate', 'FeatureParameterInteger',
+    'GoogleAppsSettings', 'HighVelocitySalesSettings', 'Index', 'IndMfgSalesAgreementSettings', 'IndustriesManufacturingSettings',
+    'IndustriesSettings', 'IntegrationHubSettings', 'IntegrationHubSettingsType', 'IoTSettings', 'IsvHammerSettings', 'LoginFlow',
+    'MarketingActionSettings', 'MarketingResourceType', 'MlDomain', 'MyDomainDiscoverableLogin', 'MyDomainSettings', 'Orchestration',
+    'OrchestrationContext', 'OrderManagementSettings', 'OrderSettings', 'Package', 'PardotEinsteinSettings', 'PardotSettings',
+    'PardotTenant', 'Prompt', 'QuoteSettings', 'RetailExecutionSettings', 'SharingTerritoryRule', 'SocialCustomerServiceSettings',
+    'SocialProfileSettings', 'Territory', 'Territory2', 'Territory2Model', 'Territory2Rule', 'Territory2Settings', 'Territory2Type',
+    'TimeSheetTemplate', 'TrailheadSettings', 'WorkDotComSettings'];
 
 export default class Pull extends SfdxCommand {
-    public static description = messages.getMessage("commandDescription");
+    public static description = messages.getMessage('commandDescription');
 
     public static examples = [
         `$ sfdx dxutils:pull --targetusername myOrg@example.com
@@ -31,19 +47,19 @@ export default class Pull extends SfdxCommand {
     protected static flagsConfig = {
         // flag with a value (-n, --name=VALUE)
         days: flags.integer({
-            name: "days",
-            char: "d",
-            description: messages.getMessage("daysFlagDescription")
+            name: 'days',
+            char: 'd',
+            description: messages.getMessage('daysFlagDescription')
         }),
         autodownload: flags.boolean({
-            name: "autodownload",
-            char: "a",
-            description: messages.getMessage("autoDownloadFlagDescription")
+            name: 'autodownload',
+            char: 'a',
+            description: messages.getMessage('autoDownloadFlagDescription')
         }),
         autoclean: flags.boolean({
-            name: "autoclean",
-            char: "c",
-            description: messages.getMessage("autocleanFlagDescription")
+            name: 'autoclean',
+            char: 'c',
+            description: messages.getMessage('autocleanFlagDescription')
         })
     };
 
@@ -61,14 +77,18 @@ export default class Pull extends SfdxCommand {
         const autodownload: boolean = this.flags.autodownload || false;
         const autoclean: boolean = this.flags.autoclean || false;
         const dxproject = await SfdxProject.resolve();
-        const prjfolderpath = await dxproject.getPath();
+        const prjfolderpath = dxproject.getPath();
         const projectJson = await dxproject.resolveProjectConfig();
         const projectroot = projectJson.packageDirectories[0].path;
-        const cleanCommand = `sh ${path.resolve(prjfolderpath + "/scripts/compressAll.sh")} "${projectroot}"`;
+        const cleanCommand = `sh ${path.resolve(prjfolderpath + '/scripts/compressAll.sh')} "${projectroot}"`;
 
         this.ux.log(`Flags: Num-days:${days}, Download: ${autodownload}, Clean: ${autoclean}`);
         this.ux.log(`Project folder: ${prjfolderpath}`);
         this.ux.log (`Project root: ${projectroot}`);
+
+        // Read configuration from settings (User or Workspace)
+        // const dxutilsConfig = vscode.workspace.getConfiguration('dxUtils');
+        // const currentValue = dxutilsConfig.get('dxUtils.ignoreTypes', {});
 
         // const types = this.flags.types || null;
         // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
@@ -77,47 +97,104 @@ export default class Pull extends SfdxCommand {
             `select Id,Name from User where username='${conn.getUsername()}'`
         )).records[0];
 
-        this.ux.log(`hello ${userInfo["Name"]}`);
-        console.time("Get Picklist Changes");
+        this.ux.log(`hello ${userInfo['Name']}`);
 
-        // Querying for picklist value changes from SetupAuditTrail
-        // TODO: Determine and optimize to perform
-        // 1. query via background thread every 30 seconds
-        // 2. cache the results in a map
-        const auditlogdetail = await conn.query(
-            `select Field1,Field4 from SetupAuditTrail where Action like '%picklist%' and CreatedDate=last_n_days:${days}`
+        // #region PREPARE
+        this.ux.startSpinner(
+            'Retrieving metadata coverage of the org for calculating changes ..'
+        );
+        console.time('Retrieving metadata coverage...');
+
+        this.ux.cli.url(
+            'Learn about metadata types and coverage',
+            'https://developer.salesforce.com/docs/metadata-coverage'
         );
 
-        // Creating a map of object(s)
-        // TODO: Determine and optimize to perform
-        // 1. describe via background thread every 30 seconds
-        // 2. cache the results in a map to be re-used
+        // Identify all metadata types supported in the org, chunk the list into multiple lists,
+        // each list with max of 3 items after exclude/removing types specified in ignoredMetadataTypes
+        // NOTE: Supported types would vary based on features active on the org (e.g., Knowledge)
+        // Further Optimization: Determine and optimize to perform
+        //  1. query via background thread every 30 seconds
+        //  2. cache the results in a map
+        const metadatatypes = await conn.metadata.describe(conn.getApiVersion());
+        const items = metadatatypes.metadataObjects.map(eachMetadataType => {
+            const typearray = [];
+            if (eachMetadataType.xmlName !== 'CustomLabels' &&
+                eachMetadataType.xmlName !== 'WorkflowTask' &&
+                ignoredMetadataTypes.indexOf(eachMetadataType.xmlName) === -1 &&
+                !eachMetadataType.xmlName.includes('ManagedTopic')
+
+            ) {
+                typearray.push({ type: eachMetadataType.xmlName });
+            }
+
+            if (eachMetadataType.hasOwnProperty('childXmlNames')) {
+                eachMetadataType.childXmlNames.forEach(eachChildXml => {
+                    typearray.push({ type: eachChildXml });
+                });
+            }
+            return typearray;
+        });
+
+        const lstitems = []
+            .concat(...items)
+            .sort((a, b) => (a['type'] > b['type'] ? 1 : -1))
+            .reduce((resultArray, item, index) => {
+                const chunkIndex = Math.floor(index / 3);
+                if (!resultArray[chunkIndex]) {
+                    resultArray[chunkIndex] = []; // start a new chunk
+                }
+                resultArray[chunkIndex].push(item);
+                return resultArray;
+            }, []);
+        this.ux.stopSpinner(`We will be retrieving components of ${items.length} metadata types from your org`);
+        console.timeEnd('Retrieving metadata coverage...');
+
+        this.ux.startSpinner('Performing global describe...');
+        console.time('Global describe...');
         const theMap = {};
         (await conn.describeGlobal()).sobjects
         .filter(
             eachSobject => !(
-                eachSobject.name.endsWith("__Tag") ||
-                eachSobject.name.endsWith("__History") ||
-                eachSobject.name.endsWith("__Feed") ||
-                eachSobject.name.endsWith("__ChangeEvent") ||
-                eachSobject.name.endsWith("__Share")
+                eachSobject.name.endsWith('__Tag') ||
+                eachSobject.name.endsWith('__History') ||
+                eachSobject.name.endsWith('__Feed') ||
+                eachSobject.name.endsWith('__ChangeEvent') ||
+                eachSobject.name.endsWith('__Share')
             )
         )
         .forEach(eachObject => {
             theMap[eachObject.labelPlural] = eachObject.name;
         });
+        console.timeEnd('Global describe...');
+        this.ux.stopSpinner('describing completed');
+
+        // #endregion
+
+        // #region PROCESS
+        console.time('Getting Picklist Changes');
+
+        // Querying for picklist value changes from SetupAuditTrail as the same is not
+        // available in metadata api or tooling api
+        this.ux.log('Querying for picklist changes...');
+        const auditlogdetail = await conn.query(
+            `select Field1,Field4 from SetupAuditTrail where Action like '%picklist%' and CreatedDate=last_n_days:${days}`
+        );
 
         // Iterate through SetupAuditTrail records and prepare of object / field api name (from field label)
+        // Field4 - Object Plural label
+        // Field1 - Field label
         const theObjectsToFieldList = {};
         auditlogdetail.records.forEach(eachRecord => {
-            if (theMap.hasOwnProperty(eachRecord["Field4"])) {
-                if (theObjectsToFieldList.hasOwnProperty(eachRecord["Field4"])) {
-                theObjectsToFieldList[theMap[eachRecord["Field4"]]].push(
-                    eachRecord["Field1"]
+            if (theMap.hasOwnProperty(eachRecord['Field4'])) {
+                if (theObjectsToFieldList.hasOwnProperty(eachRecord['Field4']) &&
+                    theMap.hasOwnProperty(eachRecord['Field4'])) {
+                    theObjectsToFieldList[theMap[eachRecord['Field4']]].push(
+                    eachRecord['Field1']
                 );
                 }
-                theObjectsToFieldList[theMap[eachRecord["Field4"]]] = [
-                eachRecord["Field1"]
+                theObjectsToFieldList[theMap[eachRecord['Field4']]] = [
+                eachRecord['Field1']
                 ];
             }
         });
@@ -137,57 +214,21 @@ export default class Pull extends SfdxCommand {
                 });
         };
 
+        this.ux.log (`Identified changes in picklists: ${JSON.stringify(theObjectsToFieldList)}`);
         const objects = Object.keys(theObjectsToFieldList);
-        const picklists = [].concat(await Promise.all(objects.map(getDescribe)));
-        console.timeEnd("Get Picklist Changes");
+        const picklists = [].concat(await BlueBirdPromise.all(objects.map(getDescribe)));
+        console.timeEnd('Getting Picklist Changes');
 
-        // Identify all metadata types supported in the Org
-        // NOTE: Supported types would vary based on features active on the org (e.g., Knowledge)
-        console.time("Identify your changes");
-        const metadatatypes = await conn.metadata.describe(conn.getApiVersion());
-        const items = metadatatypes.metadataObjects.map(eachMetadataType => {
-            const typearray = [];
-            if (eachMetadataType.xmlName !== "CustomLabels" &&
-                eachMetadataType.xmlName !== "WorkflowTask" &&
-                !eachMetadataType.xmlName.includes("ManagedTopic")
-            ) {
-                typearray.push({ type: eachMetadataType.xmlName });
-            }
-
-            if (eachMetadataType.hasOwnProperty("childXmlNames")) {
-                eachMetadataType.childXmlNames.forEach(eachChildXml => {
-
-                    typearray.push({ type: eachChildXml });
-                });
-            }
-            return typearray;
-        });
-
-        this.ux.stopSpinner(`Your org has ${items.length} metadata types`);
-        this.ux.cli.url(
-            "Learn about metadata types and coverage",
-            "https://developer.salesforce.com/docs/metadata-coverage"
-        );
-        const lstitems = []
-            .concat(...items)
-            .sort((a, b) => (a["type"] > b["type"] ? 1 : -1))
-            .reduce((resultArray, item, index) => {
-                const chunkIndex = Math.floor(index / 3);
-                if (!resultArray[chunkIndex]) {
-                    resultArray[chunkIndex] = []; // start a new chunk
-                }
-                resultArray[chunkIndex].push(item);
-                return resultArray;
-            }, []);
-
+        console.time('Identify your changes');
         this.ux.startSpinner(
-            "Retrieving metadata - list information for calculating changes .."
+            'Retrieving metadata - list information for calculating changes, should take about 3 minutes .. Hang on tight'
         );
 
-        const allresults = await Promise.map(
+        console.time('Listing metadata changes for identified metadata types...');
+        const allresults = await BlueBirdPromise.map(
             lstitems,
             eachitem => {
-                this.ux.log (`Retrieving metadata for: ${JSON.stringify(eachitem)}`);
+                // this.ux.log (`Describing metadata changes for: ${JSON.stringify(eachitem)}`);
                 return conn.metadata
                 .list(eachitem, conn.getApiVersion())
                 .then(res => {
@@ -197,23 +238,20 @@ export default class Pull extends SfdxCommand {
             },
             { concurrency: 60 }
         );
-
-        this.ux.startSpinner(
-            "Calculating changes in your sandbox, should take about 3 minutes .. Hang on"
-        );
+        console.timeEnd('Listing metadata changes for identified metadata types...');
 
         const mychanges = {};
         const allres = [].concat(...allresults).filter(eachResult => {
-            this.ux.log(`Checking changes for ${eachResult.fileName}`);
-            if (eachResult && eachResult.hasOwnProperty("lastModifiedDate")) {
+            if (eachResult && eachResult.hasOwnProperty('lastModifiedDate')) {
+                // this.ux.log(`Checking changes for ${eachResult.fileName}`);
                 const diffindays = moment().diff(
                     moment(eachResult.lastModifiedDate),
-                    "days");
+                    'days');
 
                 return (
                     diffindays <= days &&
-                    (eachResult.lastModifiedById === userInfo["Id"] ||
-                        eachResult.createdById === userInfo["Id"])
+                    (eachResult.lastModifiedById === userInfo['Id'] ||
+                        eachResult.createdById === userInfo['Id'])
                     );
             }
             return false;
@@ -226,8 +264,8 @@ export default class Pull extends SfdxCommand {
                 } else mychanges[eachItem.type] = [eachItem.fullName];
             });
 
-            mychanges["CustomField"].push(...picklists);
-            this.ux.stopSpinner("That took a while, but we managed to collect info");
+            mychanges['CustomField'].push(...picklists);
+            this.ux.stopSpinner('That took a while, but we managed to collect info');
 
             let packagexmlstring = `<?xml version="1.0" encoding="UTF-8"?>\n
                     <Package xmlns="http://soap.sforce.com/2006/04/metadata">\n
@@ -239,61 +277,69 @@ export default class Pull extends SfdxCommand {
                     mychanges[eachKey].forEach(eachItem => {
                         thestring += `    <members>${eachItem}</members>\n`;
                     });
-                    thestring += "  </types>\n";
+                    thestring += '  </types>\n';
                     return thestring;
             })
-            .join("");
-            packagexmlstring += "</Package>";
+            .join('');
+            packagexmlstring += '</Package>';
 
-            console.timeEnd("Identify your changes");
-            // const allresults = await Promise.all(lstitems.map(eacharray=>conn.metadata.list(eacharray)));
+            console.timeEnd('Identify your changes');
+            // const allresults = await BlueBirdPromise.all(lstitems.map(eacharray=>conn.metadata.list(eacharray)));
             await fs.writeFile(
-                path.resolve(`./package.xml`),
+                path.resolve('./package.xml'),
                 packagexmlstring,
-                "utf8"
+                'utf8'
             );
 
-            this.ux.log("Generated package xml");
-            console.time("Retrieving your changes");
+            this.ux.log('Generated package xml');
+
+        // #endregion
+
+        // #region EXECUTE
+            console.time('Retrieving your changes');
             if (autodownload) {
                 this.ux.startSpinner(
                     "you opted for autodownload, so i'm Downloading the changes"
                 );
 
-                let retrieveCommand = "";
+                let retrieveCommand = '';
                 this.ux.log(
-                    "You are in project mode, will keep the files in your project folder"
+                    'You are in project mode, will keep the files in your project folder'
                 );
-                retrieveCommand = `sfdx force:source:retrieve -x ${path.resolve("./package.xml")} -w 30 -u ${this.org.getUsername()} --json`;
+                retrieveCommand = `sfdx force:source:retrieve -x ${path.resolve('./package.xml')} -w 30 -u ${this.org.getUsername()} --json`;
 
-                this.ux.log(`Clean command: ${cleanCommand}`);
+                // this.ux.log(`Clean command: ${cleanCommand}`);
                 try {
                     await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
-                    this.ux.stopSpinner("Done downloading source files");
+                    this.ux.stopSpinner('Done downloading source files');
                     if (autoclean) {
                         await exec(cleanCommand, { maxBuffer: 1000000 * 1024 });
                     }
-                    console.timeEnd("Retrieving your changes");
-                    return "successfully retrieved files";
+                    console.timeEnd('Retrieving your changes');
+                    return 'successfully retrieved files';
                 } catch (e) {
                     try {
                         await exec(retrieveCommand, { maxBuffer: 1000000 * 1024 });
-                        this.ux.stopSpinner("Done downloading source files");
-                        if (autoclean)
+                        this.ux.stopSpinner('Done downloading source files');
+                        if (autoclean) {
                             await exec(cleanCommand, { maxBuffer: 1000000 * 1024 });
-                        console.timeEnd("Retrieving your changes");
-                        return "successfully retrieved files ";
+                        }
+                        console.timeEnd('Retrieving your changes');
+                        return 'successfully retrieved files ';
                     } catch (e2) {
-                        this.ux.stopSpinner("Done downloading source files");
-                        if (autoclean)
+                        this.ux.stopSpinner('Done downloading source files');
+                        if (autoclean) {
                             await exec(cleanCommand, { maxBuffer: 1000000 * 1024 });
-                        console.timeEnd("Retrieving your changes");
-                        return "successfully retrieved files";
+                        }
+                        console.timeEnd('Retrieving your changes');
+                        return 'successfully retrieved files';
                     }
                 }
             } else {
-                this.ux.log("Your packagexml awaits");
+                this.ux.log('Your packagexml awaits');
             }
+
+        // #endregion
         }
     }
 }

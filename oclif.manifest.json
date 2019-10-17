@@ -4,13 +4,13 @@
     "dxutils:pull": {
       "id": "dxutils:pull",
       "description": "Pull changes from your connected org and generate an xml or autodownload metadata based on last modified date",
-      "usage": "<%= command.id %> [-d <integer>] [-a] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]",
+      "usage": "<%= command.id %> [-d <integer>] [-a] [-c] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]",
       "pluginName": "@siddharatha/dxutils",
       "pluginType": "core",
       "aliases": [],
       "examples": [
-        "$ sfdx dxutils:pull --targetusername myOrg@example.com\n  Hello myname\n  Calculating packages",
-        "$ sfdx dxutils:pull -u myOrg@example.com -a\n  Hello myname\n  Calculating packages ...\n  You have 130 metadata types in your org I can scan\n  "
+        "$ sfdx dxutils:pull --targetusername myOrg@example.com\n        Hello myname\n        Calculating packages",
+        "$ sfdx dxutils:pull -u myOrg@example.com -a\n        Hello myname\n        Calculating packages ...\n        You have 130 metadata types in your org I can scan"
       ],
       "flags": {
         "json": {
@@ -50,6 +50,13 @@
           "type": "boolean",
           "char": "a",
           "description": "AutoDownload the files using sfdx force:source:retrieve",
+          "allowNo": false
+        },
+        "autoclean": {
+          "name": "autoclean",
+          "type": "boolean",
+          "char": "c",
+          "description": "Automatically clean the files that are downloaded with sfdx dxutils:pull",
           "allowNo": false
         }
       },
