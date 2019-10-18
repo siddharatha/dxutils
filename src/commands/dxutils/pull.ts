@@ -18,18 +18,29 @@ const messages = core.Messages.loadMessages('@siddharatha/dxutils', 'pull');
 
 // Array of metadata types that can ignored while performing list metadata operation
 // Enhance to read from Workspace / User Settings using vscode module
-const ignoredMetadataTypes: string[] = ['AccountForecastSettings', 'AIAssistantTemplate', 'AppleDomainVerification', 'AssistantSkillQuickAction',
+const ignoredMetadataTypes: string[] = ['AccountForecastSettings', 'AIAssistantTemplate', 'ApexTestSuite',
+    'AppleDomainVerification', 'AssistantSkillQuickAction',
     'AssistantSkillSobjectAction', 'Audience', 'BlockchainSettings', 'Bot', 'BotSettings', 'BotVersion',
     'CampaignInfluenceModel', 'CaseSubjectParticle', 'ChatterEmailsMDSettings', 'ChatterExtension', 'CleanDataService',
-    'CMSConnectSource', 'DataDotComSettings', 'DataPipeline', 'DelegateGroup', 'DeploymentSettings', 'DevHubSettings',
+    'CMSConnectSource', 'DataDotComSettings', 'DataPipeline', 'DelegateGroup', 'DeploymentSettings', 'DevHubSettings', 'Document',
     'EssentialsSettings', 'EssentialsTrialOrgSettings', 'FeatureParameterBoolean', 'FeatureParameterDate', 'FeatureParameterInteger',
     'GoogleAppsSettings', 'HighVelocitySalesSettings', 'Index', 'IndMfgSalesAgreementSettings', 'IndustriesManufacturingSettings',
-    'IndustriesSettings', 'IntegrationHubSettings', 'IntegrationHubSettingsType', 'IoTSettings', 'IsvHammerSettings', 'LoginFlow',
+    'IndustriesSettings', 'InstalledPackage', 'IntegrationHubSettings', 'IntegrationHubSettingsType', 'IoTSettings', 'IsvHammerSettings',
+    'ListView', 'LoginFlow',
     'MarketingActionSettings', 'MarketingResourceType', 'MlDomain', 'MyDomainDiscoverableLogin', 'MyDomainSettings', 'Orchestration',
     'OrchestrationContext', 'OrderManagementSettings', 'OrderSettings', 'Package', 'PardotEinsteinSettings', 'PardotSettings',
-    'PardotTenant', 'Prompt', 'QuoteSettings', 'RetailExecutionSettings', 'SharingTerritoryRule', 'SocialCustomerServiceSettings',
+    'PardotTenant', 'Prompt', 'QuoteSettings', 'RetailExecutionSettings', 'Role', 'Scontrol', 'SharingTerritoryRule', 'SocialCustomerServiceSettings',
     'SocialProfileSettings', 'Territory', 'Territory2', 'Territory2Model', 'Territory2Rule', 'Territory2Settings', 'Territory2Type',
-    'TimeSheetTemplate', 'TrailheadSettings', 'WorkDotComSettings'];
+    'TimeSheetTemplate', 'TrailheadSettings', 'WorkDotComSettings',
+    // Special exclusion (consider removing as required)
+    'Group', 'Queue', 'QueueRoutingConfig', 'Report', 'Dashboard'];
+
+const ignoreComponentMap: Map<string, string[]> = new Map([
+    ['Profile', ['Standard', 'ReadOnly', 'ContractManager', 'StandardAul', 'MarketingProfile', 'Company Communities User', 'Premier Support User', 'SolutionManager',
+        'SalesforceIQ Integration User', 'Sales Insights Integration User', 'Analytics Cloud Integration User', 'Analytics Cloud Security User',
+        'Force.com - App Subscription User']
+    ] ]);
+const pageSize = 200;
 
 export default class Pull extends SfdxCommand {
     public static description = messages.getMessage('commandDescription');
@@ -92,12 +103,16 @@ export default class Pull extends SfdxCommand {
 
         // const types = this.flags.types || null;
         // this.org is guaranteed because requiresUsername=true, as opposed to supportsUsername
+
         const conn = this.org.getConnection();
         const userInfo = (await conn.query(
             `select Id,Name from User where username='${conn.getUsername()}'`
         )).records[0];
-
         this.ux.log(`hello ${userInfo['Name']}`);
+
+        if (ignoreComponentMap.has('Profile') && ignoreComponentMap.get('Profile').indexOf('Standard2') === -1) {
+            this.ux.log('Profile name Standard2 not found');
+        }
 
         // #region PREPARE
         this.ux.startSpinner(
@@ -116,7 +131,27 @@ export default class Pull extends SfdxCommand {
         // Further Optimization: Determine and optimize to perform
         //  1. query via background thread every 30 seconds
         //  2. cache the results in a map
-        const metadatatypes = await conn.metadata.describe(conn.getApiVersion());
+        let metadatatypes;
+
+        const mdtTypesJsonFile = path.resolve('./mdtTypes.json');
+
+        let fileExists = true;
+        await fs.access(mdtTypesJsonFile, fs.constants.R_OK)
+            .catch(err => {
+                console.log(`File Error: ${err}`);
+                fileExists = false;
+            });
+
+        // Enhance the logic to update the available metadata types upon API version change
+        if (!fileExists) {
+            metadatatypes = await conn.metadata.describe(conn.getApiVersion());
+            if (metadatatypes) {
+                await fs.writeJson(mdtTypesJsonFile, metadatatypes);
+            }
+        } else {
+            metadatatypes = await fs.readJson(mdtTypesJsonFile, false);
+        }
+
         const items = metadatatypes.metadataObjects.map(eachMetadataType => {
             const typearray = [];
             if (eachMetadataType.xmlName !== 'CustomLabels' &&
@@ -130,17 +165,20 @@ export default class Pull extends SfdxCommand {
 
             if (eachMetadataType.hasOwnProperty('childXmlNames')) {
                 eachMetadataType.childXmlNames.forEach(eachChildXml => {
-                    typearray.push({ type: eachChildXml });
+                    if (ignoredMetadataTypes.indexOf(eachChildXml) === -1) {
+                        typearray.push({ type: eachChildXml });
+                    }
                 });
             }
             return typearray;
         });
 
+        // DO NOT increase the number of items to listMetadataQuery
         const lstitems = []
             .concat(...items)
             .sort((a, b) => (a['type'] > b['type'] ? 1 : -1))
             .reduce((resultArray, item, index) => {
-                const chunkIndex = Math.floor(index / 3);
+                const chunkIndex = Math.floor(index / 2);
                 if (!resultArray[chunkIndex]) {
                     resultArray[chunkIndex] = []; // start a new chunk
                 }
@@ -150,22 +188,28 @@ export default class Pull extends SfdxCommand {
         this.ux.stopSpinner(`We will be retrieving components of ${items.length} metadata types from your org`);
         console.timeEnd('Retrieving metadata coverage...');
 
-        this.ux.startSpinner('Performing global describe...');
+        this.ux.startSpinner('Generating object list...');
         console.time('Global describe...');
+
+        // Instead of performing globalDescribe, below work-around has been applied
+        // In a complex org with lot of metadata (over 1500 custom objects), globalDescribe
+        // operation is taking a lot of time and sometimes peaking at 600K ms
+        const entityCountInfo = (await conn.query("SELECT count() FROM EntityDefinition WHERE (NOT DeveloperName LIKE '%__Tag') AND (NOT DeveloperName LIKE '%__ChangeEvent') AND (NOT DeveloperName LIKE '%__Share') AND (NOT DeveloperName LIKE '%__History') AND (NOT DeveloperName LIKE '%__Feed')")).totalSize;
+        const entityPageCount = (entityCountInfo % pageSize > 0) ? Math.floor(entityCountInfo / 200) + 1 : Math.floor(entityCountInfo / 200);
+        const lEntityQry: string[] = new Array(entityPageCount);
         const theMap = {};
-        (await conn.describeGlobal()).sobjects
-        .filter(
-            eachSobject => !(
-                eachSobject.name.endsWith('__Tag') ||
-                eachSobject.name.endsWith('__History') ||
-                eachSobject.name.endsWith('__Feed') ||
-                eachSobject.name.endsWith('__ChangeEvent') ||
-                eachSobject.name.endsWith('__Share')
-            )
-        )
-        .forEach(eachObject => {
-            theMap[eachObject.labelPlural] = eachObject.name;
-        });
+
+        for (let i = 0; i < entityPageCount; i++) {
+            const offset = i * pageSize;
+            console.time(`Query time: ${offset}`);
+            this.ux.log(`Querying for entities, offset: ${offset}`);
+            lEntityQry[i] = (`SELECT PluralLabel,QualifiedApiName FROM EntityDefinition WHERE (NOT DeveloperName LIKE '%__Tag') AND (NOT DeveloperName LIKE '%__ChangeEvent') AND (NOT DeveloperName LIKE '%__Share') AND (NOT DeveloperName LIKE '%__History') AND (NOT DeveloperName LIKE '%__Feed') ORDER BY PluralLabel LIMIT ${pageSize} OFFSET ${offset}`);
+            await conn.query(lEntityQry[i])
+                .then(result => {
+                    result.records.forEach(resItem => theMap[resItem['PluralLabel']] = resItem['QualifiedApiName']);
+                });
+            console.timeEnd(`Query time: ${offset}`);
+        }
         console.timeEnd('Global describe...');
         this.ux.stopSpinner('describing completed');
 
@@ -214,7 +258,8 @@ export default class Pull extends SfdxCommand {
                 });
         };
 
-        this.ux.log (`Identified changes in picklists: ${JSON.stringify(theObjectsToFieldList)}`);
+        this.ux.log(`Identified changes in picklists: ${JSON.stringify(theObjectsToFieldList)}`);
+
         const objects = Object.keys(theObjectsToFieldList);
         const picklists = [].concat(await BlueBirdPromise.all(objects.map(getDescribe)));
         console.timeEnd('Getting Picklist Changes');
@@ -224,6 +269,12 @@ export default class Pull extends SfdxCommand {
             'Retrieving metadata - list information for calculating changes, should take about 3 minutes .. Hang on tight'
         );
 
+        // DO NOT:
+        //  increase the number of items to listMetadataQuery
+        //  increase the degree of parallelization. Increasing the parallelization of
+        //  listMetadataQuery (assuming multiple developers are using same non source tracking org)
+        //  causes increased failures of metadata operations given the size of complex org having
+        //  huge metadata
         console.time('Listing metadata changes for identified metadata types...');
         const allresults = await BlueBirdPromise.map(
             lstitems,
@@ -231,12 +282,13 @@ export default class Pull extends SfdxCommand {
                 // this.ux.log (`Describing metadata changes for: ${JSON.stringify(eachitem)}`);
                 return conn.metadata
                 .list(eachitem, conn.getApiVersion())
-                .then(res => {
-                    return res;
-                })
+                    .then(res => {
+                        this.ux.log(`Retrieved metadata list for types ${JSON.stringify(eachitem)}`);
+                        return res;
+                    })
                 .catch(er => {});
             },
-            { concurrency: 60 }
+            { concurrency: 2 }
         );
         console.timeEnd('Listing metadata changes for identified metadata types...');
 
