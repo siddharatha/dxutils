@@ -29,7 +29,9 @@ const ignoredMetadataTypes: string[] = ['AccountForecastSettings', 'AIAssistantT
     'ListView', 'LoginFlow',
     'MarketingActionSettings', 'MarketingResourceType', 'MlDomain', 'MyDomainDiscoverableLogin', 'MyDomainSettings', 'Orchestration',
     'OrchestrationContext', 'OrderManagementSettings', 'OrderSettings', 'Package', 'PardotEinsteinSettings', 'PardotSettings',
-    'PardotTenant', 'Prompt', 'QuoteSettings', 'RetailExecutionSettings', 'Role', 'Scontrol', 'SharingTerritoryRule', 'SocialCustomerServiceSettings',
+    'PardotTenant', 'Prompt', 'QuoteSettings', 'RetailExecutionSettings', 'Role', 'Scontrol',
+    'SharingCriteriaRule', 'SharingOwnerRule', 'SharingRules',
+    'SharingTerritoryRule', 'SocialCustomerServiceSettings',
     'SocialProfileSettings', 'Territory', 'Territory2', 'Territory2Model', 'Territory2Rule', 'Territory2Settings', 'Territory2Type',
     'TimeSheetTemplate', 'TrailheadSettings', 'WorkDotComSettings',
     // Special exclusion (consider removing as required)
@@ -327,7 +329,11 @@ export default class Pull extends SfdxCommand {
                 .map(eachKey => {
                     let thestring = ` <types>\n\t<name>${eachKey}</name>`;
                     mychanges[eachKey].forEach(eachItem => {
-                        thestring += `    <members>${eachItem}</members>\n`;
+                        const decodedItem = decodeURI(eachItem);
+                        const skipItem = (ignoreComponentMap.has(eachKey) && ignoreComponentMap.get(eachKey).indexOf(decodedItem) > -1);
+                        if (!skipItem) {
+                            thestring += `    <members>${eachItem}</members>\n`;
+                        }
                     });
                     thestring += '  </types>\n';
                     return thestring;
