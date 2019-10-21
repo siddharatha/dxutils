@@ -16,8 +16,9 @@ core.Messages.importMessagesDirectory(__dirname);
 // or any library that is using the messages framework can also be loaded this way.
 const messages = core.Messages.loadMessages('@siddharatha/dxutils', 'pull');
 
-// Array of metadata types that can ignored while performing list metadata operation
-// Enhance to read from Workspace / User Settings using vscode module
+// Array of metadata types that will be ignored while performing listMetadataQuery operation
+// Enhance to read this configuration from Workspace / User Settings using vscode module
+// (consider removing as required)
 const ignoredMetadataTypes: string[] = ['AccountForecastSettings', 'AIAssistantTemplate', 'ApexTestSuite',
     'AppleDomainVerification', 'AssistantSkillQuickAction',
     'AssistantSkillSobjectAction', 'Audience', 'BlockchainSettings', 'Bot', 'BotSettings', 'BotVersion',
@@ -29,19 +30,96 @@ const ignoredMetadataTypes: string[] = ['AccountForecastSettings', 'AIAssistantT
     'ListView', 'LoginFlow',
     'MarketingActionSettings', 'MarketingResourceType', 'MlDomain', 'MyDomainDiscoverableLogin', 'MyDomainSettings', 'Orchestration',
     'OrchestrationContext', 'OrderManagementSettings', 'OrderSettings', 'Package', 'PardotEinsteinSettings', 'PardotSettings',
-    'PardotTenant', 'Prompt', 'QuoteSettings', 'RetailExecutionSettings', 'Role', 'Scontrol',
+    'PardotTenant', 'ProfilePasswordPolicy', 'Prompt', 'QuoteSettings', 'RetailExecutionSettings', 'Role', 'Scontrol',
     'SharingCriteriaRule', 'SharingOwnerRule', 'SharingRules',
     'SharingTerritoryRule', 'SocialCustomerServiceSettings',
     'SocialProfileSettings', 'Territory', 'Territory2', 'Territory2Model', 'Territory2Rule', 'Territory2Settings', 'Territory2Type',
     'TimeSheetTemplate', 'TrailheadSettings', 'WorkDotComSettings',
-    // Special exclusion (consider removing as required)
-    'Group', 'Queue', 'QueueRoutingConfig', 'Report', 'Dashboard'];
 
+    'CustomObject', 'Group', 'Queue', 'QueueRoutingConfig', 'Report', 'Dashboard'];
+
+// Ensure below line of metadata types are excluded from using listMetadataQuery. Tooling setup objects can be
+// queried directly. listMetadata query performance is not optimal in a complex org that has sample volume
+// as below (Class - 7944, Component - 329, Page - 1879, StaticResource - 1045, Trigger - 747, CustomObject - 1829)
 const ignoreComponentMap: Map<string, string[]> = new Map([
     ['Profile', ['Standard', 'ReadOnly', 'ContractManager', 'StandardAul', 'MarketingProfile', 'Company Communities User', 'Premier Support User', 'SolutionManager',
         'SalesforceIQ Integration User', 'Sales Insights Integration User', 'Analytics Cloud Integration User', 'Analytics Cloud Security User',
         'Force.com - App Subscription User']
-    ] ]);
+    ]]);
+
+// const toolingQueryByNameWithNamespace: string[] = ['ApexClass', 'ApexComponent', 'ApexPage', 'ApexTrigger',
+//     'BusinessProcess', 'StaticResource', 'WebLink'];
+const toolingQueryByNameWithNamespace: Map<string, string> = new Map([
+    ['ApexClass', 'ApexClass'],
+    ['ApexComponent', 'ApexComponent'],
+    ['ApexPage', 'ApexPage'],
+    ['ApexTrigger', 'ApexTrigger'],
+    ['BusinessProcess', 'BusinessProcess'],
+    ['CustomLabel', 'ExternalString'],
+    ['StaticResource', 'StaticResource'],
+    ['WebLink', 'WebLink']
+]);
+const toolingQueryByDeveloperNameWithNamespace: Map<string, string> = new Map([
+    ['AuraDefinitionBundle', 'AuraDefinitionBundle'],
+    ['CustomHelpMenuSection', 'CustomHelpMenuSection'],
+    ['CustomPermission', 'CustomPermission'],
+    ['ContentAsset', 'ContentAsset'],
+    ['CspTrustedSite', 'CspTrustedSite'],
+    ['EmailTemplate', 'EmailTemplate'],
+    ['ExternalDataSource', 'ExternalDataSource'],
+    ['LiveChatSensitiveDataRule', 'LiveChatSensitiveDataRule'],
+    ['LightningExperienceTheme', 'LightningExperienceTheme'],
+    ['MobileApplicationDetail', 'MobileApplicationDetail'],
+    ['NamedCredential', 'NamedCredential'],
+    ['PlatformCachePartition', 'PlatformCachePartition'],
+    ['SamlSsoConfig', 'SamlSsoConfig'],
+    ['TransactionSecurityPolicy', 'TransactionSecurityPolicy']
+]);
+
+// const toolingQueryByDeveloperNameWithNamespace: string[] = ['AuraDefinitionBundle', 'CustomHelpMenuSection',
+//     'CustomPermission', 'ContentAsset', 'CspTrustedSite', 'EmailTemplate', 'ExternalDataSource',
+//     'LiveChatSensitiveDataRule', 'LightningExperienceTheme', 'MobileApplicationDetail',
+//     'NamedCredential', 'PlatformCachePartition', 'SamlSsoConfig', 'TransactionSecurityPolicy'];
+const toolingQueryByDeveloperNameWithoutNamespace: Map<string, string> = new Map([
+    ['LiveChatButton', 'LiveChatButton'],
+    ['OauthCustomScope', 'OauthCustomScope'],
+    ['PresenceDeclineReason', 'PresenceDeclineReason'],
+    ['PresenceUserConfig', 'PresenceUserConfig'],
+    ['ServiceChannel', 'ServiceChannel'],
+    ['ServicePresenceStatus', 'ServicePresenceStatus'],
+    ['Skill', 'Skill']
+]);
+
+// const toolingQueryByDeveloperNameWithoutNamespace: string[] = ['LiveChatButton', 'OauthCustomScope',
+//     'PresenceDeclineReason', 'PresenceUserConfig', 'ServiceChannel', 'ServicePresenceStatus',
+//     'Skill'];
+
+// Id, Name
+// WithNamespace
+//
+// WithoutNamespace
+//  Network, AssignmentRule, Profile
+
+// Id, DeveloperName
+// WithoutNamespace -
+    //  Skill, ServiceChannel, ServicePresenceStatus, PresenceDeclineReason, PresenceUserConfig
+    //  OauthCustomScope, LiveChatButton
+// WithNamespace
+
+// Special Processing
+//  PermissionSet
+//  CustomLabel
+//  RecordType
+//  CustomField
+
+const QRY_NAME: string = 'SELECT Id, Name FROM ';
+const QRY_DEVNAME: string = 'SELECT Id, DeveloperName FROM ';
+const QRY_WHERE: string = ' WHERE ';
+const QRY_NAMESPACE: string = ' NamespacePrefix = \'\' ';
+const QRY_AND: string = ' AND ';
+const QRY_LASTMODDATE: string = ' LastModifiedDate = Last_N_Days:';
+const QRY_LASTMODID: string = ' LastModifiedById = ';
+
 const pageSize = 200;
 
 export default class Pull extends SfdxCommand {
@@ -110,11 +188,7 @@ export default class Pull extends SfdxCommand {
         const userInfo = (await conn.query(
             `select Id,Name from User where username='${conn.getUsername()}'`
         )).records[0];
-        this.ux.log(`hello ${userInfo['Name']}`);
-
-        if (ignoreComponentMap.has('Profile') && ignoreComponentMap.get('Profile').indexOf('Standard2') === -1) {
-            this.ux.log('Profile name Standard2 not found');
-        }
+        this.ux.log(`hello ${userInfo['Name']} - UserId: ${userInfo['Id']}`);
 
         // #region PREPARE
         this.ux.startSpinner(
@@ -159,15 +233,20 @@ export default class Pull extends SfdxCommand {
             if (eachMetadataType.xmlName !== 'CustomLabels' &&
                 eachMetadataType.xmlName !== 'WorkflowTask' &&
                 ignoredMetadataTypes.indexOf(eachMetadataType.xmlName) === -1 &&
+                !toolingQueryByNameWithNamespace.has(eachMetadataType.xmlName) &&
+                !toolingQueryByDeveloperNameWithNamespace.has(eachMetadataType.xmlName) &&
+                !toolingQueryByDeveloperNameWithoutNamespace.has(eachMetadataType.xmlName) &&
                 !eachMetadataType.xmlName.includes('ManagedTopic')
-
             ) {
                 typearray.push({ type: eachMetadataType.xmlName });
             }
 
             if (eachMetadataType.hasOwnProperty('childXmlNames')) {
                 eachMetadataType.childXmlNames.forEach(eachChildXml => {
-                    if (ignoredMetadataTypes.indexOf(eachChildXml) === -1) {
+                    if (ignoredMetadataTypes.indexOf(eachChildXml) === -1 &&
+                        !toolingQueryByNameWithNamespace.has(eachChildXml) &&
+                        !toolingQueryByDeveloperNameWithNamespace.has(eachChildXml) &&
+                        !toolingQueryByDeveloperNameWithoutNamespace.has(eachChildXml)) {
                         typearray.push({ type: eachChildXml });
                     }
                 });
@@ -196,25 +275,39 @@ export default class Pull extends SfdxCommand {
         // Instead of performing globalDescribe, below work-around has been applied
         // In a complex org with lot of metadata (over 1500 custom objects), globalDescribe
         // operation is taking a lot of time and sometimes peaking at 600K ms
-        const entityCountInfo = (await conn.query("SELECT count() FROM EntityDefinition WHERE (NOT DeveloperName LIKE '%__Tag') AND (NOT DeveloperName LIKE '%__ChangeEvent') AND (NOT DeveloperName LIKE '%__Share') AND (NOT DeveloperName LIKE '%__History') AND (NOT DeveloperName LIKE '%__Feed')")).totalSize;
+        // const entityCountInfo = (await conn.query("SELECT count() FROM EntityDefinition WHERE (NOT DeveloperName LIKE '%__Tag') AND (NOT DeveloperName LIKE '%__ChangeEvent') AND (NOT DeveloperName LIKE '%__Share') AND (NOT DeveloperName LIKE '%__History') AND (NOT DeveloperName LIKE '%__Feed')")).totalSize;
+        const entityCountInfo = (await conn.query("SELECT count() FROM EntityDefinition WHERE Publisher.Name = '<local>'")).totalSize;
         const entityPageCount = (entityCountInfo % pageSize > 0) ? Math.floor(entityCountInfo / 200) + 1 : Math.floor(entityCountInfo / 200);
         const lEntityQry: string[] = new Array(entityPageCount);
         const theMap = {};
+        const mychanges: Map<string, string[]> = new Map<string, string[]>();
+        mychanges['CustomObject'] = [];
 
         for (let i = 0; i < entityPageCount; i++) {
             const offset = i * pageSize;
             console.time(`Query time: ${offset}`);
             this.ux.log(`Querying for entities, offset: ${offset}`);
-            lEntityQry[i] = (`SELECT PluralLabel,QualifiedApiName FROM EntityDefinition WHERE (NOT DeveloperName LIKE '%__Tag') AND (NOT DeveloperName LIKE '%__ChangeEvent') AND (NOT DeveloperName LIKE '%__Share') AND (NOT DeveloperName LIKE '%__History') AND (NOT DeveloperName LIKE '%__Feed') ORDER BY PluralLabel LIMIT ${pageSize} OFFSET ${offset}`);
+            lEntityQry[i] = (`SELECT PluralLabel,QualifiedApiName,LastModifiedDate,LastModifiedById FROM EntityDefinition WHERE Publisher.Name = '<local>' ORDER BY PluralLabel LIMIT ${pageSize} OFFSET ${offset}`);
             await conn.query(lEntityQry[i])
                 .then(result => {
-                    result.records.forEach(resItem => theMap[resItem['PluralLabel']] = resItem['QualifiedApiName']);
+
+                    result.records.forEach(resItem => {
+                        theMap[resItem['PluralLabel']] = resItem['QualifiedApiName'];
+
+                        const diffindays = moment().diff(
+                            moment(resItem['LastModifiedDate']),
+                            'days');
+
+                        if (diffindays <= days && resItem['LastModifiedById'] === userInfo['Id']) {
+                            mychanges['CustomObject'].push(resItem['QualifiedApiName']);
+                        }
+                    });
                 });
             console.timeEnd(`Query time: ${offset}`);
         }
         console.timeEnd('Global describe...');
         this.ux.stopSpinner('describing completed');
-
+        this.ux.log(`My object changes ${JSON.stringify(mychanges)}`);
         // #endregion
 
         // #region PROCESS
@@ -244,6 +337,24 @@ export default class Pull extends SfdxCommand {
                 ];
             }
         });
+
+        const processResult = (queryType: string, queryResult, propertyName: string) => {
+            if (queryResult != null) {
+                queryResult.records.forEach(eachItem => {
+                    mychanges[queryType].push(eachItem[propertyName]);
+                });
+            }
+        };
+
+        const processMetadata = (queryType: string, query: string, propertyName: string) => {
+            if (!mychanges.has(queryType)) {
+                mychanges[queryType] = [];
+            }
+            return conn.query(query)
+                .then(result => {
+                    processResult(queryType, result, propertyName);
+                });
+        };
 
         const getDescribe = async objectName => {
             return await conn
@@ -275,17 +386,42 @@ export default class Pull extends SfdxCommand {
         //  increase the number of items to listMetadataQuery
         //  increase the degree of parallelization. Increasing the parallelization of
         //  listMetadataQuery (assuming multiple developers are using same non source tracking org)
-        //  causes increased failures of metadata operations given the size of complex org having
-        //  huge metadata
+        //  causes increased failures of metadata operations given the size of org having huge metadata
+        await BlueBirdPromise.map(
+            Object.keys(toolingQueryByNameWithNamespace),
+            eachKey => {
+                const qry = `${QRY_NAME} ${toolingQueryByNameWithNamespace[eachKey]} ${QRY_WHERE} ${QRY_NAMESPACE}${QRY_AND}${QRY_LASTMODDATE}${days} ${QRY_AND}${QRY_LASTMODID}'${userInfo['Id']}'`;
+                return processMetadata(eachKey, qry, 'Name');
+            },
+            { concurrency: 2 }
+        );
+
+        await BlueBirdPromise.map(
+            Object.keys(toolingQueryByDeveloperNameWithNamespace),
+            eachKey => {
+                const qry = `${QRY_DEVNAME} ${toolingQueryByDeveloperNameWithNamespace[eachKey]} ${QRY_WHERE} ${QRY_NAMESPACE}${QRY_AND}${QRY_LASTMODDATE}${days} ${QRY_AND} ${QRY_LASTMODID}'${userInfo['Id']}'`;
+                return processMetadata(eachKey, qry, 'DeveloperName');
+            },
+            { concurrency: 2 }
+        );
+        await BlueBirdPromise.map(
+            Object.keys(toolingQueryByDeveloperNameWithoutNamespace),
+            eachKey => {
+                const qry = `${QRY_DEVNAME} ${eachKey} ${QRY_WHERE} ${QRY_LASTMODDATE}${days} ${QRY_AND} ${QRY_LASTMODID}'${userInfo['Id']}'`;
+                return processMetadata(eachKey, qry, 'DeveloperName');
+            },
+            { concurrency: 2 }
+        );
+
         console.time('Listing metadata changes for identified metadata types...');
         const allresults = await BlueBirdPromise.map(
             lstitems,
             eachitem => {
-                // this.ux.log (`Describing metadata changes for: ${JSON.stringify(eachitem)}`);
+                console.time(`Retrieved metadata list for types ${JSON.stringify(eachitem)}`);
                 return conn.metadata
                 .list(eachitem, conn.getApiVersion())
                     .then(res => {
-                        this.ux.log(`Retrieved metadata list for types ${JSON.stringify(eachitem)}`);
+                        console.timeEnd(`Retrieved metadata list for types ${JSON.stringify(eachitem)}`);
                         return res;
                     })
                 .catch(er => {});
@@ -294,10 +430,8 @@ export default class Pull extends SfdxCommand {
         );
         console.timeEnd('Listing metadata changes for identified metadata types...');
 
-        const mychanges = {};
         const allres = [].concat(...allresults).filter(eachResult => {
             if (eachResult && eachResult.hasOwnProperty('lastModifiedDate')) {
-                // this.ux.log(`Checking changes for ${eachResult.fileName}`);
                 const diffindays = moment().diff(
                     moment(eachResult.lastModifiedDate),
                     'days');
@@ -327,15 +461,18 @@ export default class Pull extends SfdxCommand {
 
             packagexmlstring += Object.keys(mychanges)
                 .map(eachKey => {
-                    let thestring = ` <types>\n\t<name>${eachKey}</name>`;
-                    mychanges[eachKey].forEach(eachItem => {
-                        const decodedItem = decodeURI(eachItem);
-                        const skipItem = (ignoreComponentMap.has(eachKey) && ignoreComponentMap.get(eachKey).indexOf(decodedItem) > -1);
-                        if (!skipItem) {
-                            thestring += `    <members>${eachItem}</members>\n`;
-                        }
-                    });
-                    thestring += '  </types>\n';
+                    let thestring = '';
+                    if (mychanges[eachKey].length > 0) {
+                        thestring = ` <types>\n\t<name>${eachKey}</name>`;
+                        mychanges[eachKey].forEach(eachItem => {
+                            const decodedItem = decodeURI(eachItem);
+                            const skipItem = (ignoreComponentMap.has(eachKey) && ignoreComponentMap.get(eachKey).indexOf(decodedItem) > -1);
+                            if (!skipItem) {
+                                thestring += `    <members>${eachItem}</members>\n`;
+                            }
+                        });
+                        thestring += '  </types>\n';
+                    }
                     return thestring;
             })
             .join('');
