@@ -12,7 +12,8 @@
     "@salesforce/core": "^1.0.1",
     "bluebird": "^3.5.3",
     "moment": "^2.24.0",
-    "tslib": "1"
+    "tslib": "1",
+    "vscode": "^1.1.36"
   },
   "devDependencies": {
     "@oclif/dev-cli": "^1",
@@ -28,10 +29,14 @@
     "nyc": "^13",
     "sinon": "5",
     "ts-node": "^7",
-    "typescript": "^3.0"
+    "tslint-eslint-rules": "^5.4.0",
+    "tslint-config-standard": "^8.0.0",
+    "typescript": "^3.0",
+    "vscode": "^1.1.36"
   },
   "engines": {
-    "node": ">=8.0.0"
+    "node": ">=8.0.0",
+    "vscode": "^1.22.0"
   },
   "files": [
     "/lib",
@@ -64,6 +69,19 @@
     "posttest": "tslint -p test -t stylish",
     "prepare": "rm -rf lib && tsc -b && oclif-dev manifest && oclif-dev readme && npm shrinkwrap",
     "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif-dev readme && git add README.md"
+    "version": "oclif-dev readme && git add README.md",
+    "postinstall": "node node_modules/vscode/bin/install"
+  },
+  "contributes": {
+    "configuration": {
+      "title": "DxUtils Configuration",
+      "properties": {
+        "dxUtils.ignoreTypes": {
+          "type": "array",
+          "default": [],
+          "description": "Specifies the metadata types that are ignored by default"
+        }
+      }
+    }
   }
 }
