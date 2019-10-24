@@ -1,4 +1,5 @@
 import { flags, SfdxCommand } from '@salesforce/command';
+import { fs } from '@salesforce/core';
 import * as path from 'path';
 import { downloadFile } from '../../shared/download';
 
@@ -46,7 +47,8 @@ export default class EventLogs extends SfdxCommand {
   protected static requiresProject = false;
   public async run(): Promise<any> {
     const dateliteral: string = this.flags.dateliteral || 'TODAY';
-    const targetdir: string = this.flags.targetdir || path.resolve('./');
+    const targetdir: string =
+      path.resolve(this.flags.targetdir) || path.resolve('./');
     const eventtypes: string = this.flags.eventtypes || 'LightningPageView';
     const conn = this.org.getConnection();
 
@@ -64,11 +66,13 @@ export default class EventLogs extends SfdxCommand {
           eachEventType => `'${eachEventType}'`
         )}) and LogDate = ${dateliteral}`
     );
+
+    await fs.mkdirp(targetdir);
     this.ux.startSpinner('Retrieving Event Log Files');
     Promise.all(
       eventlogs.records.map(eachRecord => {
         const url = `${conn.instanceUrl}/${eachRecord['LogFile']}`;
-        return downloadFile(conn.accessToken, url, eachRecord['Id']);
+        return downloadFile(conn.accessToken, url, eachRecord['Id'], targetdir);
       })
     )
       .then(() => {
