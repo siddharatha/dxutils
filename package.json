@@ -54,9 +54,6 @@
     "topics": {
       "pull": {
         "description": "Perform a pull."
-      },
-      "starter": {
-        "description": "Perform a starter"
       }
     },
     "devPlugins": [

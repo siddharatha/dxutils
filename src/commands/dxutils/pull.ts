@@ -7,6 +7,8 @@ import * as child_process from 'child_process';
 import * as moment from 'moment';
 import * as path from 'path';
 // import * as vscode from 'vscode';
+import {ignoreComponentMap,toolingQueryByDeveloperNameWithNamespace,toolingQueryByDeveloperNameWithoutNamespace,toolingQueryByNameWithNamespace} from '../../config';
+import { getMetadataTypesList, getListMetadataAPIProcessingList, getPickListChangesFromSetupAuditTrail } from '../../utils';
 
 const exec = BlueBirdPromise.promisify(child_process.exec);
 // Initialize Messages with the current plugin directory
@@ -19,76 +21,7 @@ const messages = core.Messages.loadMessages('@siddharatha/dxutils', 'pull');
 // Array of metadata types that will be ignored while performing listMetadataQuery operation
 // Enhance to read this configuration from Workspace / User Settings using vscode module
 // (consider removing as required)
-const ignoredMetadataTypes: string[] = ['AccountForecastSettings', 'AIAssistantTemplate', 'ApexTestSuite',
-    'AppleDomainVerification', 'AssistantSkillQuickAction',
-    'AssistantSkillSobjectAction', 'Audience', 'BlockchainSettings', 'Bot', 'BotSettings', 'BotVersion',
-    'CampaignInfluenceModel', 'CaseSubjectParticle', 'ChatterEmailsMDSettings', 'ChatterExtension', 'CleanDataService',
-    'CMSConnectSource', 'DataDotComSettings', 'DataPipeline', 'DelegateGroup', 'DeploymentSettings', 'DevHubSettings', 'Document',
-    'EssentialsSettings', 'EssentialsTrialOrgSettings', 'FeatureParameterBoolean', 'FeatureParameterDate', 'FeatureParameterInteger',
-    'GoogleAppsSettings', 'HighVelocitySalesSettings', 'Index', 'IndMfgSalesAgreementSettings', 'IndustriesManufacturingSettings',
-    'IndustriesSettings', 'InstalledPackage', 'IntegrationHubSettings', 'IntegrationHubSettingsType', 'IoTSettings', 'IsvHammerSettings',
-    'ListView', 'LoginFlow',
-    'MarketingActionSettings', 'MarketingResourceType', 'MlDomain', 'MyDomainDiscoverableLogin', 'MyDomainSettings', 'Orchestration',
-    'OrchestrationContext', 'OrderManagementSettings', 'OrderSettings', 'Package', 'PardotEinsteinSettings', 'PardotSettings',
-    'PardotTenant', 'ProfilePasswordPolicy', 'Prompt', 'QuoteSettings', 'RetailExecutionSettings', 'Role', 'Scontrol',
-    'SharingCriteriaRule', 'SharingOwnerRule', 'SharingRules',
-    'SharingTerritoryRule', 'SocialCustomerServiceSettings',
-    'SocialProfileSettings', 'Territory', 'Territory2', 'Territory2Model', 'Territory2Rule', 'Territory2Settings', 'Territory2Type',
-    'TimeSheetTemplate', 'TrailheadSettings', 'WorkDotComSettings',
 
-    'CustomObject', 'Group', 'Queue', 'QueueRoutingConfig', 'Report', 'Dashboard'];
-
-// Ensure below line of metadata types are excluded from using listMetadataQuery. Tooling setup objects can be
-// queried directly. listMetadata query performance is not optimal in a complex org that has sample volume
-// as below (Class - 7944, Component - 329, Page - 1879, StaticResource - 1045, Trigger - 747, CustomObject - 1829)
-const ignoreComponentMap: Map<string, string[]> = new Map([
-    ['Profile', ['Standard', 'ReadOnly', 'ContractManager', 'StandardAul', 'MarketingProfile', 'Company Communities User', 'Premier Support User', 'SolutionManager',
-        'SalesforceIQ Integration User', 'Sales Insights Integration User', 'Analytics Cloud Integration User', 'Analytics Cloud Security User',
-        'Force.com - App Subscription User']
-    ]]);
-
-// const toolingQueryByNameWithNamespace: string[] = ['ApexClass', 'ApexComponent', 'ApexPage', 'ApexTrigger',
-//     'BusinessProcess', 'StaticResource', 'WebLink'];
-const toolingQueryByNameWithNamespace: Map<string, string> = new Map([
-    ['ApexClass', 'ApexClass'],
-    ['ApexComponent', 'ApexComponent'],
-    ['ApexPage', 'ApexPage'],
-    ['ApexTrigger', 'ApexTrigger'],
-    ['BusinessProcess', 'BusinessProcess'],
-    ['CustomLabel', 'ExternalString'],
-    ['StaticResource', 'StaticResource'],
-    ['WebLink', 'WebLink']
-]);
-const toolingQueryByDeveloperNameWithNamespace: Map<string, string> = new Map([
-    ['AuraDefinitionBundle', 'AuraDefinitionBundle'],
-    ['CustomHelpMenuSection', 'CustomHelpMenuSection'],
-    ['CustomPermission', 'CustomPermission'],
-    ['ContentAsset', 'ContentAsset'],
-    ['CspTrustedSite', 'CspTrustedSite'],
-    ['EmailTemplate', 'EmailTemplate'],
-    ['ExternalDataSource', 'ExternalDataSource'],
-    ['LiveChatSensitiveDataRule', 'LiveChatSensitiveDataRule'],
-    ['LightningExperienceTheme', 'LightningExperienceTheme'],
-    ['MobileApplicationDetail', 'MobileApplicationDetail'],
-    ['NamedCredential', 'NamedCredential'],
-    ['PlatformCachePartition', 'PlatformCachePartition'],
-    ['SamlSsoConfig', 'SamlSsoConfig'],
-    ['TransactionSecurityPolicy', 'TransactionSecurityPolicy']
-]);
-
-// const toolingQueryByDeveloperNameWithNamespace: string[] = ['AuraDefinitionBundle', 'CustomHelpMenuSection',
-//     'CustomPermission', 'ContentAsset', 'CspTrustedSite', 'EmailTemplate', 'ExternalDataSource',
-//     'LiveChatSensitiveDataRule', 'LightningExperienceTheme', 'MobileApplicationDetail',
-//     'NamedCredential', 'PlatformCachePartition', 'SamlSsoConfig', 'TransactionSecurityPolicy'];
-const toolingQueryByDeveloperNameWithoutNamespace: Map<string, string> = new Map([
-    ['LiveChatButton', 'LiveChatButton'],
-    ['OauthCustomScope', 'OauthCustomScope'],
-    ['PresenceDeclineReason', 'PresenceDeclineReason'],
-    ['PresenceUserConfig', 'PresenceUserConfig'],
-    ['ServiceChannel', 'ServiceChannel'],
-    ['ServicePresenceStatus', 'ServicePresenceStatus'],
-    ['Skill', 'Skill']
-]);
 
 // const toolingQueryByDeveloperNameWithoutNamespace: string[] = ['LiveChatButton', 'OauthCustomScope',
 //     'PresenceDeclineReason', 'PresenceUserConfig', 'ServiceChannel', 'ServicePresenceStatus',
@@ -207,66 +140,11 @@ export default class Pull extends SfdxCommand {
         // Further Optimization: Determine and optimize to perform
         //  1. query via background thread every 30 seconds
         //  2. cache the results in a map
-        let metadatatypes;
-
-        const mdtTypesJsonFile = path.resolve('./mdtTypes.json');
-
-        let fileExists = true;
-        await fs.access(mdtTypesJsonFile, fs.constants.R_OK)
-            .catch(err => {
-                console.log(`File Error: ${err}`);
-                fileExists = false;
-            });
-
-        // Enhance the logic to update the available metadata types upon API version change
-        if (!fileExists) {
-            metadatatypes = await conn.metadata.describe(conn.getApiVersion());
-            if (metadatatypes) {
-                await fs.writeJson(mdtTypesJsonFile, metadatatypes);
-            }
-        } else {
-            metadatatypes = await fs.readJson(mdtTypesJsonFile, false);
-        }
-
-        const items = metadatatypes.metadataObjects.map(eachMetadataType => {
-            const typearray = [];
-            if (eachMetadataType.xmlName !== 'CustomLabels' &&
-                eachMetadataType.xmlName !== 'WorkflowTask' &&
-                ignoredMetadataTypes.indexOf(eachMetadataType.xmlName) === -1 &&
-                !toolingQueryByNameWithNamespace.has(eachMetadataType.xmlName) &&
-                !toolingQueryByDeveloperNameWithNamespace.has(eachMetadataType.xmlName) &&
-                !toolingQueryByDeveloperNameWithoutNamespace.has(eachMetadataType.xmlName) &&
-                !eachMetadataType.xmlName.includes('ManagedTopic')
-            ) {
-                typearray.push({ type: eachMetadataType.xmlName });
-            }
-
-            if (eachMetadataType.hasOwnProperty('childXmlNames')) {
-                eachMetadataType.childXmlNames.forEach(eachChildXml => {
-                    if (ignoredMetadataTypes.indexOf(eachChildXml) === -1 &&
-                        !toolingQueryByNameWithNamespace.has(eachChildXml) &&
-                        !toolingQueryByDeveloperNameWithNamespace.has(eachChildXml) &&
-                        !toolingQueryByDeveloperNameWithoutNamespace.has(eachChildXml)) {
-                        typearray.push({ type: eachChildXml });
-                    }
-                });
-            }
-            return typearray;
-        });
-
-        // DO NOT increase the number of items to listMetadataQuery
-        const lstitems = []
-            .concat(...items)
-            .sort((a, b) => (a['type'] > b['type'] ? 1 : -1))
-            .reduce((resultArray, item, index) => {
-                const chunkIndex = Math.floor(index / 2);
-                if (!resultArray[chunkIndex]) {
-                    resultArray[chunkIndex] = []; // start a new chunk
-                }
-                resultArray[chunkIndex].push(item);
-                return resultArray;
-            }, []);
-        this.ux.stopSpinner(`We will be retrieving components of ${items.length} metadata types from your org`);
+        
+        const metadatatypes = await getMetadataTypesList('./mdtTypes.json',conn);
+        const lstitems = await getListMetadataAPIProcessingList(metadatatypes);
+        
+        this.ux.stopSpinner(`We will be retrieving components of ${lstitems.length * 2} metadata types from your org`);
         console.timeEnd('Retrieving metadata coverage...');
 
         this.ux.startSpinner('Generating object list...');
@@ -312,31 +190,11 @@ export default class Pull extends SfdxCommand {
 
         // #region PROCESS
         console.time('Getting Picklist Changes');
-
+        const theObjectsToFieldList = await getPickListChangesFromSetupAuditTrail(conn,theMap);
         // Querying for picklist value changes from SetupAuditTrail as the same is not
         // available in metadata api or tooling api
         this.ux.log('Querying for picklist changes...');
-        const auditlogdetail = await conn.query(
-            `select Field1,Field4 from SetupAuditTrail where Action like '%picklist%' and CreatedDate=last_n_days:${days}`
-        );
-
-        // Iterate through SetupAuditTrail records and prepare of object / field api name (from field label)
-        // Field4 - Object Plural label
-        // Field1 - Field label
-        const theObjectsToFieldList = {};
-        auditlogdetail.records.forEach(eachRecord => {
-            if (theMap.hasOwnProperty(eachRecord['Field4'])) {
-                if (theObjectsToFieldList.hasOwnProperty(eachRecord['Field4']) &&
-                    theMap.hasOwnProperty(eachRecord['Field4'])) {
-                    theObjectsToFieldList[theMap[eachRecord['Field4']]].push(
-                    eachRecord['Field1']
-                );
-                }
-                theObjectsToFieldList[theMap[eachRecord['Field4']]] = [
-                eachRecord['Field1']
-                ];
-            }
-        });
+        
 
         const processResult = (queryType: string, queryResult, propertyName: string) => {
             if (queryResult != null) {
@@ -424,7 +282,7 @@ export default class Pull extends SfdxCommand {
                         console.timeEnd(`Retrieved metadata list for types ${JSON.stringify(eachitem)}`);
                         return res;
                     })
-                .catch(er => {});
+                .catch(() => {});
             },
             { concurrency: 2 }
         );
@@ -451,7 +309,9 @@ export default class Pull extends SfdxCommand {
                     mychanges[eachItem.type].push(eachItem.fullName);
                 } else mychanges[eachItem.type] = [eachItem.fullName];
             });
-
+            if(!mychanges.hasOwnProperty('CustomField'))
+            mychanges['CustomField'] = [];
+            
             mychanges['CustomField'].push(...picklists);
             this.ux.stopSpinner('That took a while, but we managed to collect info');
 
