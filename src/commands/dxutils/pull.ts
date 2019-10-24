@@ -4,11 +4,10 @@ import { fs } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
 import * as BlueBirdPromise from 'bluebird';
 import * as child_process from 'child_process';
-import * as moment from 'moment';
 import * as path from 'path';
 // import * as vscode from 'vscode';
-import {ignoreComponentMap,toolingQueryByDeveloperNameWithNamespace,toolingQueryByDeveloperNameWithoutNamespace,toolingQueryByNameWithNamespace} from '../../config';
-import { getMetadataTypesList, getListMetadataAPIProcessingList, getPickListChangesFromSetupAuditTrail } from '../../utils';
+import {ignoreComponentMap,toolingQueryByDeveloperNameWithNamespace,toolingQueryByDeveloperNameWithoutNamespace,toolingQueryByNameWithNamespace} from '../../shared/config';
+import { getMetadataTypesList, getListMetadataAPIProcessingList, getPickListChangesFromSetupAuditTrail, getObjectListFromToolingAPI } from '../../shared/metadata';
 
 const exec = BlueBirdPromise.promisify(child_process.exec);
 // Initialize Messages with the current plugin directory
@@ -53,7 +52,6 @@ const QRY_AND: string = ' AND ';
 const QRY_LASTMODDATE: string = ' LastModifiedDate = Last_N_Days:';
 const QRY_LASTMODID: string = ' LastModifiedById = ';
 
-const pageSize = 200;
 
 export default class Pull extends SfdxCommand {
     public static description = messages.getMessage('commandDescription');
@@ -134,12 +132,11 @@ export default class Pull extends SfdxCommand {
             'https://developer.salesforce.com/docs/metadata-coverage'
         );
 
-        // Identify all metadata types supported in the org, chunk the list into multiple lists,
-        // each list with max of 3 items after exclude/removing types specified in ignoredMetadataTypes
-        // NOTE: Supported types would vary based on features active on the org (e.g., Knowledge)
-        // Further Optimization: Determine and optimize to perform
-        //  1. query via background thread every 30 seconds
-        //  2. cache the results in a map
+        const theMap = {};
+        const mychanges: Map<string, string[]> = new Map<string, string[]>();
+        mychanges['CustomObject'] = [];
+        await getObjectListFromToolingAPI(conn,theMap,mychanges,userInfo['Id'],days);
+        
         
         const metadatatypes = await getMetadataTypesList('./mdtTypes.json',conn);
         const lstitems = await getListMetadataAPIProcessingList(metadatatypes);
@@ -154,35 +151,7 @@ export default class Pull extends SfdxCommand {
         // In a complex org with lot of metadata (over 1500 custom objects), globalDescribe
         // operation is taking a lot of time and sometimes peaking at 600K ms
         // const entityCountInfo = (await conn.query("SELECT count() FROM EntityDefinition WHERE (NOT DeveloperName LIKE '%__Tag') AND (NOT DeveloperName LIKE '%__ChangeEvent') AND (NOT DeveloperName LIKE '%__Share') AND (NOT DeveloperName LIKE '%__History') AND (NOT DeveloperName LIKE '%__Feed')")).totalSize;
-        const entityCountInfo = (await conn.query("SELECT count() FROM EntityDefinition WHERE Publisher.Name = '<local>'")).totalSize;
-        const entityPageCount = (entityCountInfo % pageSize > 0) ? Math.floor(entityCountInfo / 200) + 1 : Math.floor(entityCountInfo / 200);
-        const lEntityQry: string[] = new Array(entityPageCount);
-        const theMap = {};
-        const mychanges: Map<string, string[]> = new Map<string, string[]>();
-        mychanges['CustomObject'] = [];
-
-        for (let i = 0; i < entityPageCount; i++) {
-            const offset = i * pageSize;
-            console.time(`Query time: ${offset}`);
-            this.ux.log(`Querying for entities, offset: ${offset}`);
-            lEntityQry[i] = (`SELECT PluralLabel,QualifiedApiName,LastModifiedDate,LastModifiedById FROM EntityDefinition WHERE Publisher.Name = '<local>' ORDER BY PluralLabel LIMIT ${pageSize} OFFSET ${offset}`);
-            await conn.query(lEntityQry[i])
-                .then(result => {
-
-                    result.records.forEach(resItem => {
-                        theMap[resItem['PluralLabel']] = resItem['QualifiedApiName'];
-
-                        const diffindays = moment().diff(
-                            moment(resItem['LastModifiedDate']),
-                            'days');
-
-                        if (diffindays <= days && resItem['LastModifiedById'] === userInfo['Id']) {
-                            mychanges['CustomObject'].push(resItem['QualifiedApiName']);
-                        }
-                    });
-                });
-            console.timeEnd(`Query time: ${offset}`);
-        }
+        
         console.timeEnd('Global describe...');
         this.ux.stopSpinner('describing completed');
         this.ux.log(`My object changes ${JSON.stringify(mychanges)}`);
@@ -190,7 +159,7 @@ export default class Pull extends SfdxCommand {
 
         // #region PROCESS
         console.time('Getting Picklist Changes');
-        const theObjectsToFieldList = await getPickListChangesFromSetupAuditTrail(conn,theMap);
+        const theObjectsToFieldList = await getPickListChangesFromSetupAuditTrail(conn,theMap,days);
         // Querying for picklist value changes from SetupAuditTrail as the same is not
         // available in metadata api or tooling api
         this.ux.log('Querying for picklist changes...');

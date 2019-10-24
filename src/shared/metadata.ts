@@ -1,6 +1,7 @@
 import {resolve as pathResolve} from 'path';
 import { fs } from '@salesforce/core';
 import { ignoredMetadataTypes, toolingQueryByNameWithNamespace, toolingQueryByDeveloperNameWithNamespace, toolingQueryByDeveloperNameWithoutNamespace } from './config';
+import * as moment from 'moment';
 
 export const getMetadataTypesList = async function (fileName:string,conn:any){
     let metadatatypes;
@@ -70,7 +71,7 @@ export const getListMetadataAPIProcessingList = async function (metadatatypes:{m
     return lstitems;    
 }
 
-export const getPickListChangesFromSetupAuditTrail = async function(conn:any,theMap:{}){
+export const getPickListChangesFromSetupAuditTrail = async function(conn:any,theMap:{},days:number){
     const auditlogdetail = await conn.query(
         `select Field1,Field4 from SetupAuditTrail where Action like '%picklist%' and CreatedDate=last_n_days:${days}`
     );
@@ -93,4 +94,46 @@ export const getPickListChangesFromSetupAuditTrail = async function(conn:any,the
         }
     });
     return theObjectsToFieldList;
+}
+
+
+// Identify all metadata types supported in the org, chunk the list into multiple lists,
+        // each list with max of 3 items after exclude/removing types specified in ignoredMetadataTypes
+        // NOTE: Supported types would vary based on features active on the org (e.g., Knowledge)
+        // Further Optimization: Determine and optimize to perform
+        //  1. query via background thread every 30 seconds
+        //  2. cache the results in a map
+export const getObjectListFromToolingAPI = async function(conn:any,theMap:any,mychanges:any,userId:string,days:number){
+    const pageSize = 200;
+    const entityCountInfo = (await conn.query("SELECT count() FROM EntityDefinition WHERE Publisher.Name = '<local>'")).totalSize;
+        const entityPageCount = (entityCountInfo % pageSize > 0) ? Math.floor(entityCountInfo / 200) + 1 : Math.floor(entityCountInfo / 200);
+        const lEntityQry: string[] = new Array(entityPageCount);
+        
+
+        for (let i = 0; i < entityPageCount; i++) {
+            const offset = i * pageSize;
+            console.time(`Query time: ${offset}`);
+            lEntityQry[i] = (`SELECT PluralLabel,QualifiedApiName,LastModifiedDate,LastModifiedById FROM EntityDefinition WHERE Publisher.Name = '<local>' ORDER BY PluralLabel LIMIT ${pageSize} OFFSET ${offset}`);
+            await conn.query(lEntityQry[i])
+                .then(result => {
+
+                    result.records.forEach(resItem => {
+                        theMap[resItem['PluralLabel']] = resItem['QualifiedApiName'];
+
+                        const diffindays = moment().diff(
+                            moment(resItem['LastModifiedDate']),
+                            'days');
+
+                        if (diffindays <= days && resItem['LastModifiedById'] === userId) {
+                            mychanges['CustomObject'].push(resItem['QualifiedApiName']);
+                        }
+                    });
+                });
+            console.timeEnd(`Query time: ${offset}`);
+        }
+
+}
+
+export const generatePackageXML=function (){
+    return null;
 }

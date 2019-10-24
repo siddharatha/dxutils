@@ -1158,6 +1158,11 @@ form-data@~2.3.2:
     combined-stream "^1.0.6"
     mime-types "^2.1.12"
 
+formidable@^1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/formidable/-/formidable-1.2.1.tgz#70fb7ca0290ee6ff961090415f4b3df3d2082659"
+  integrity sha512-Fs9VRguL0gqGHkXS5GQiMCr1VhZBxz0JnJs4JmMp/2jL18Fmbzvv7vOFRU+U8TBkHEE/CX1qDXzJplVULgsLeg==
+
 fragment-cache@^0.2.1:
   version "0.2.1"
   resolved "https://registry.yarnpkg.com/fragment-cache/-/fragment-cache-0.2.1.tgz#4290fad27f13e89be7f33799c6bc5a0abfff0d19"
@@ -1929,6 +1934,15 @@ merge-source-map@^1.1.0:
 merge2@^1.2.3:
   version "1.2.3"
   resolved "https://registry.yarnpkg.com/merge2/-/merge2-1.2.3.tgz#7ee99dbd69bb6481689253f018488a1b902b0ed5"
+
+mergexml@^1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/mergexml/-/mergexml-1.2.1.tgz#462a097de775003d1af13fb89654548536feafed"
+  integrity sha512-IOW62CoY+QfpzsVrDhNG8hKAZnIRhmMldKfbl6/VAUecW6tUNWWtkWroCW4wSXaZp46GRwtUmZjGWCeK4FTS2w==
+  dependencies:
+    formidable "^1.2.1"
+    xmldom "^0.1.27"
+    xpath "0.0.27"
 
 micromatch@^3.1.10:
   version "3.1.10"
@@ -3227,6 +3241,16 @@ xml2js@^0.4.16:
 xmlbuilder@~9.0.1:
   version "9.0.7"
   resolved "https://registry.yarnpkg.com/xmlbuilder/-/xmlbuilder-9.0.7.tgz#132ee63d2ec5565c557e20f4c22df9aca686b10d"
+
+xmldom@^0.1.27:
+  version "0.1.27"
+  resolved "https://registry.yarnpkg.com/xmldom/-/xmldom-0.1.27.tgz#d501f97b3bdb403af8ef9ecc20573187aadac0e9"
+  integrity sha1-1QH5ezvbQDr4757MIFcxh6rawOk=
+
+xpath@0.0.27:
+  version "0.0.27"
+  resolved "https://registry.yarnpkg.com/xpath/-/xpath-0.0.27.tgz#dd3421fbdcc5646ac32c48531b4d7e9d0c2cfa92"
+  integrity sha512-fg03WRxtkCV6ohClePNAECYsmpKKTv5L8y/X3Dn1hQrec3POx2jHZ/0P2qQ6HvsrU1BmeqXcof3NGGueG6LxwQ==
 
 xtend@^4.0.0:
   version "4.0.1"
