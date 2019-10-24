@@ -1,8 +1,0 @@
-{
-  "commandDescription": "Pull changes from your connected org and generate an xml or autodownload metadata based on last modified date",
-  "nameFlagDescription": "name to print",
-  "forceFlagDescription": "example boolean flag",
-  "errorNoOrgResults": "No results found for the org '%s'.",
-  "projectNameFlagDescription": "Please select the project name",
-  "autoDownloadFlagDescription": "AutoDownload the files using sfdx force:source:retrieve"
-}

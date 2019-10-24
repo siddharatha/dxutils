@@ -11,10 +11,13 @@
     "@salesforce/command": "^1.0.1",
     "@salesforce/core": "^1.0.1",
     "bluebird": "^3.5.3",
+    "global": "^4.4.0",
     "mergexml": "^1.2.1",
     "moment": "^2.24.0",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7",
     "tslib": "1",
-    "vscode": "^1.1.36"
+    "tslint": "^5.20.0"
   },
   "devDependencies": {
     "@oclif/dev-cli": "^1",
@@ -32,12 +35,10 @@
     "ts-node": "^7",
     "tslint-config-standard": "^8.0.0",
     "tslint-eslint-rules": "^5.4.0",
-    "typescript": "^3.0",
-    "vscode": "^1.1.36"
+    "typescript": "^3.0"
   },
   "engines": {
-    "node": ">=8.0.0",
-    "vscode": "^1.22.0"
+    "node": ">=8.0.0"
   },
   "files": [
     "/lib",
@@ -55,6 +56,9 @@
     "topics": {
       "pull": {
         "description": "Perform a pull."
+      },
+      "eventlogs": {
+        "description": "Download event logs"
       }
     },
     "devPlugins": [
@@ -67,8 +71,7 @@
     "posttest": "tslint -p test -t stylish",
     "prepare": "rm -rf lib && tsc -b && oclif-dev manifest && oclif-dev readme && npm shrinkwrap",
     "test": "nyc --extension .ts mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif-dev readme && git add README.md",
-    "postinstall": "node node_modules/vscode/bin/install"
+    "version": "oclif-dev readme && git add README.md"
   },
   "contributes": {
     "configuration": {

@@ -22,7 +22,7 @@ $ npm install -g @siddharatha/dxutils
 $ @siddharatha/dxutils COMMAND
 running command...
 $ @siddharatha/dxutils (-v|--version|version)
-@siddharatha/dxutils/0.0.10 win32-x64 node-v10.15.3
+@siddharatha/dxutils/0.0.10 darwin-x64 node-v12.10.0
 $ @siddharatha/dxutils --help [COMMAND]
 USAGE
   $ @siddharatha/dxutils COMMAND
@@ -30,8 +30,38 @@ USAGE
 ```
 <!-- usagestop -->
 <!-- commands -->
+* [`@siddharatha/dxutils <%= command.id %> [-d <string>] [-t <string>] [-e <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#siddharathadxutils--commandid---d-string--t-string--e-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
 * [`@siddharatha/dxutils <%= command.id %> [-d <integer>] [-a] [-c] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#siddharathadxutils--commandid---d-integer--a--c--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfatal)
-* [`@siddharatha/dxutils <%= command.id %> [-n <string>] [-a] [--json] [--loglevel trace|debug|info|warn|error|fatal]`](#siddharathadxutils--commandid---n-string--a---json---loglevel-tracedebuginfowarnerrorfatal)
+
+## `@siddharatha/dxutils <%= command.id %> [-d <string>] [-t <string>] [-e <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
+
+Assign something man
+
+```
+USAGE
+  $ @siddharatha/dxutils dxutils:eventlogs [-d <string>] [-t <string>] [-e <string>] [-u <string>] [--apiversion 
+  <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]
+
+OPTIONS
+  -d, --dateliteral=dateliteral                   Enter Date
+  -e, --eventtypes=eventtypes                     Enter EventTypes
+  -t, --targetdir=targetdir                       Enter targetDIR
+  -u, --targetusername=targetusername             username or alias for the target org; overrides default target org
+  --apiversion=apiversion                         override the api version used for api requests made by this command
+  --json                                          format output as json
+  --loglevel=(trace|debug|info|warn|error|fatal)  [default: warn] logging level for this command invocation
+
+EXAMPLES
+  $ sfdx dxutils:eventlogs --targetusername myOrg@example.com
+           Hello myname
+           Calculating packages
+  $ sfdx dxutils:eventlogs -u myOrg@example.com -d THIS_WEEK -e LightningPageView
+           Hello myname
+           Calculating packages ...
+           You have 130 metadata types in your org I can scan
+```
+
+_See code: [src/commands/dxutils/eventlogs.ts](https://github.com/siddharatha/dxutils/blob/v0.0.10/src/commands/dxutils/eventlogs.ts)_
 
 ## `@siddharatha/dxutils <%= command.id %> [-d <integer>] [-a] [-c] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
 
@@ -69,33 +99,7 @@ EXAMPLES
            You have 130 metadata types in your org I can scan
 ```
 
-_See code: [src\commands\dxutils\pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.10/src\commands\dxutils\pull.ts)_
-
-## `@siddharatha/dxutils <%= command.id %> [-n <string>] [-a] [--json] [--loglevel trace|debug|info|warn|error|fatal]`
-
-Pull changes from your connected org and generate an xml or autodownload metadata based on last modified date
-
-```
-USAGE
-  $ @siddharatha/dxutils dxutils:starter [-n <string>] [-a] [--json] [--loglevel trace|debug|info|warn|error|fatal]
-
-OPTIONS
-  -a, --autodownload                              AutoDownload the files using sfdx force:source:retrieve
-  -n, --projectname=projectname                   Please select the project name
-  --json                                          format output as json
-  --loglevel=(trace|debug|info|warn|error|fatal)  [default: warn] logging level for this command invocation
-
-EXAMPLES
-  $ sfdx dxutils:pull --targetusername myOrg@example.com
-     Hello myname
-     Calculating packages
-  $ sfdx dxutils:pull -u myOrg@example.com -a
-     Hello myname
-     Calculating packages ...
-     You have 130 metadata types in your org I can scan
-```
-
-_See code: [src\commands\dxutils\starter.ts](https://github.com/siddharatha/dxutils/blob/v0.0.10/src\commands\dxutils\starter.ts)_
+_See code: [src/commands/dxutils/pull.ts](https://github.com/siddharatha/dxutils/blob/v0.0.10/src/commands/dxutils/pull.ts)_
 <!-- commandsstop -->
 <!-- debugging-your-plugin -->
 # Debugging your plugin
