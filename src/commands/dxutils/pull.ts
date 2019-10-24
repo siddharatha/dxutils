@@ -4,6 +4,7 @@ import { fs } from '@salesforce/core';
 import { AnyJson } from '@salesforce/ts-types';
 import * as BlueBirdPromise from 'bluebird';
 import * as child_process from 'child_process';
+import * as moment from 'moment';
 import * as path from 'path';
 // import * as vscode from 'vscode';
 import {ignoreComponentMap,toolingQueryByDeveloperNameWithNamespace,toolingQueryByDeveloperNameWithoutNamespace,toolingQueryByNameWithNamespace} from '../../shared/config';
