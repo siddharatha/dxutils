@@ -14,8 +14,8 @@ export default class EventLogs extends SfdxCommand {
         Calculating packages`,
     `$ sfdx dxutils:eventlogs -u myOrg@example.com -d THIS_WEEK -e LightningPageView
         Hello myname
-        Calculating packages ...
-        You have 130 metadata types in your org I can scan`
+        Download Event Log Files ...
+        `
   ];
 
   protected static flagsConfig = {
